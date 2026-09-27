@@ -1,0 +1,82 @@
+rules_version = '2';
+
+// Regras de segurança do Firestore — MP Ferragens.
+// Cole este conteúdo em: Firebase Console > Firestore Database > Regras > Publicar.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // Administrador = conta que tem um documento admins/{uid} (criado à mão no console; ninguém cria pelo site).
+    function isAdmin() {
+      return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // Cada conta só consegue ler o próprio documento (é assim que o site descobre se você é admin).
+    match /admins/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    // Catálogo e configurações: qualquer visitante lê, só o admin altera.
+    match /config/{doc} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /products/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /categories/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /banners/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /promotions/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    // Cupons são lidos pelo navegador para validar o código; quem abrir o console consegue ver a lista.
+    match /coupons/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Cadastro dos clientes: o próprio cliente lê/edita; o admin lê todos.
+    match /users/{uid} {
+      allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
+      allow create, update: if signedIn() && request.auth.uid == uid && request.resource.data.id == uid;
+      allow delete: if isAdmin();
+    }
+
+    // Pedidos.
+    match /orders/{id} {
+      // Qualquer visitante pode enviar um pedido novo (o cliente logado só em nome dele mesmo).
+      allow create: if request.resource.data.status == 'Aguardando'
+        && request.resource.data.items is list
+        && request.resource.data.items.size() > 0
+        && request.resource.data.items.size() <= 100
+        && request.resource.data.total is number
+        && (request.resource.data.userId == null
+            || (signedIn() && request.resource.data.userId == request.auth.uid));
+
+      // Só o dono do pedido e o admin enxergam.
+      allow read: if isAdmin() || (signedIn() && resource.data.userId == request.auth.uid);
+
+      // Admin muda o status/qualquer campo. O cliente só consegue CANCELAR o próprio pedido (ainda não enviado).
+      allow update: if isAdmin()
+        || (signedIn()
+            && resource.data.userId == request.auth.uid
+            && resource.data.status in ['Aguardando', 'Em separação']
+            && request.resource.data.status == 'Cancelado'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'history']));
+
+      allow delete: if isAdmin();
+    }
+  }
+}

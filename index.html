@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script>
+    /* endereço limpo (/produto/nome) aberto direto no app: volta para a rota certa da loja */
+    if (new RegExp('^/(produto|categoria)/[^/]+/?$').test(location.pathname)) {
+      document.write('<base href="/">');
+      history.replaceState(null, '', '/#' + location.pathname.replace(new RegExp('/$'), ''));
+    }
+  </script>
+  <!-- seo:start (gerado por tools/build-seo.js) -->
+  <title>MP Ferragens — Materiais de construção e ferragens em Manaus</title>
+  <meta name="description" content="Ferro, ferragens, telhas, calhas, solda, elétrica, hidráulica e pintura com preço bom em Manaus - AM. Monte seu orçamento online e finalize pelo WhatsApp.">
+  <link rel="canonical" href="https://mp-ferragens-6e4a3.web.app/">
+  <meta property="og:site_name" content="MP Ferragens">
+  <meta property="og:locale" content="pt_BR">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="MP Ferragens — Materiais de construção e ferragens em Manaus">
+  <meta property="og:description" content="Ferro, ferragens, telhas, calhas, solda, elétrica, hidráulica e pintura com preço bom em Manaus - AM. Monte seu orçamento online e finalize pelo WhatsApp.">
+  <meta property="og:url" content="https://mp-ferragens-6e4a3.web.app/">
+  <meta property="og:image" content="https://mp-ferragens-6e4a3.web.app/assets/banner-mp.jpg">
+  <meta name="twitter:card" content="summary_large_image">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"HardwareStore","name":"MP Ferragens","url":"https://mp-ferragens-6e4a3.web.app/","image":"https://mp-ferragens-6e4a3.web.app/assets/banner-mp.jpg","logo":"https://mp-ferragens-6e4a3.web.app/assets/logo.jpg","telephone":"(92) 98111-1443","address":{"@type":"PostalAddress","streetAddress":"Rua Itália, nº 33","addressLocality":"Manaus","addressRegion":"AM","addressCountry":"BR"}}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"MP Ferragens","alternateName":["MP Ferragens Manaus","MPFerragens"],"url":"https://mp-ferragens-6e4a3.web.app/"}</script>
+  <!-- seo:end -->
+  <meta name="theme-color" content="#0d0d0d">
+  <link rel="icon" href="assets/logo.jpg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/pages.css">
+</head>
+<body>
+  <a class="skip-link" href="#app">Ir para o conteúdo</a>
+  <div id="header-root"></div>
+  <main id="app" tabindex="-1"></main>
+  <div id="footer-root"></div>
+  <div id="overlay-root"></div>
+  <div id="toast-root" aria-live="polite"></div>
+  <noscript><p style="padding:24px;text-align:center">Este site precisa de JavaScript para funcionar.</p></noscript>
+
+  <!-- núcleo -->
+  <script src="js/core/utils.js" defer></script>
+  <script src="js/core/icons.js" defer></script>
+  <script src="js/core/art.js" defer></script>
+  <!-- dados iniciais (demonstração) -->
+  <script src="js/data/seed-settings.js" defer></script>
+  <script src="js/data/seed-products.js" defer></script>
+  <script src="js/data/seed-mp.js" defer></script>
+  <!-- servidor (Firebase) — desligado enquanto js/firebase-config.js estiver com null -->
+  <script src="js/firebase-config.js" defer></script>
+  <script src="js/core/cloud.js" defer></script>
+  <script src="js/core/notify.js" defer></script>
+  <!-- estado -->
+  <script src="js/core/store.js" defer></script>
+  <script src="js/core/auth.js" defer></script>
+  <script src="js/core/cart.js" defer></script>
+  <script src="js/core/ui.js" defer></script>
+  <!-- componentes -->
+  <script src="js/components/common.js" defer></script>
+  <script src="js/components/layout.js" defer></script>
+  <!-- páginas -->
+  <script src="js/pages/home.js" defer></script>
+  <script src="js/pages/catalog.js" defer></script>
+  <script src="js/pages/product.js" defer></script>
+  <script src="js/pages/cart.js" defer></script>
+  <script src="js/pages/auth.js" defer></script>
+  <script src="js/pages/account.js" defer></script>
+  <script src="js/pages/misc.js" defer></script>
+  <!-- painel administrativo -->
+  <script src="js/admin/admin.js" defer></script>
+  <script src="js/admin/admin-more.js" defer></script>
+  <script src="js/admin/alerts.js" defer></script>
+  <!-- inicialização -->
+  <script src="js/app.js" defer></script>
+</body>
+</html>

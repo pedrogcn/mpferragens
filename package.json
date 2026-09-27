@@ -1,0 +1,10 @@
+{
+  "name": "mp-ferragens",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Loja virtual MP Ferragens",
+  "scripts": {
+    "seo": "node tools/build-seo.js",
+    "deploy": "node tools/build-seo.js && firebase deploy"
+  }
+}

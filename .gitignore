@@ -1,0 +1,18 @@
+# Cache local do Firebase CLI (recriado a cada deploy)
+.firebase/
+.firebaserc.bak
+
+# Dependências, se algum dia forem instaladas
+node_modules/
+
+# Páginas geradas por tools/build-seo.js a partir dos dados ao vivo do Firestore
+# (rode "npm run seo" ou "npm run deploy" para recriá-las)
+/produto/
+/categoria/
+/sitemap.xml
+/robots.txt
+
+# Arquivos do sistema operacional / editor
+Thumbs.db
+.DS_Store
+*.log
