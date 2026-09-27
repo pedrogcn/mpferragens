@@ -25,9 +25,12 @@ const MARK = '.seo-generated';
 /* ---------- configuração ---------- */
 const cfgPath = path.join(ROOT, 'tools', 'seo.config.json');
 const cfg = fs.existsSync(cfgPath) ? JSON.parse(fs.readFileSync(cfgPath, 'utf8')) : {};
-const SITE = String(process.env.SITE_URL || cfg.siteUrl || '').replace(/\/+$/, '');
+// Em builds na Vercel, usa o endereço do próprio deploy quando SITE_URL não foi definido à mão
+// (VERCEL_PROJECT_PRODUCTION_URL = domínio de produção do projeto; VERCEL_URL = domínio deste deploy específico, ex. de preview).
+const vercelUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL;
+const SITE = String(process.env.SITE_URL || (vercelUrl && `https://${vercelUrl}`) || cfg.siteUrl || '').replace(/\/+$/, '');
 if (!/^https?:\/\//.test(SITE)) {
-  console.error('Defina "siteUrl" em tools/seo.config.json (ex.: https://mpferragens.com.br).');
+  console.error('Defina "siteUrl" em tools/seo.config.json (ex.: https://mpferragens.com.br), ou a variável de ambiente SITE_URL.');
   process.exit(1);
 }
 // lê js/firebase-config.js como o navegador lê (ignora os exemplos que estão nos comentários)

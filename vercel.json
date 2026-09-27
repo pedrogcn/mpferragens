@@ -1,0 +1,19 @@
+{
+  "buildCommand": "npm run seo",
+  "installCommand": "npm install",
+  "outputDirectory": ".",
+  "rewrites": [
+    { "source": "/produto/:path*", "destination": "/index.html" },
+    { "source": "/categoria/:path*", "destination": "/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)\\.(js|css|html)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=300" }]
+    },
+    {
+      "source": "/(.*)\\.(jpg|jpeg|png|webp|svg)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=3600" }]
+    }
+  ]
+}

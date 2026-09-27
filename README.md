@@ -17,6 +17,7 @@ Site estático (HTML + CSS + JavaScript puro, sem build). Para ver: abra `index.
 | Categorias, banners, cupons, promoções | Admin › respectivas seções |
 | Pedidos e status | Admin › Pedidos |
 | Colocar no ar e aparecer no Google (passo a passo) | [LANCAMENTO.md](LANCAMENTO.md) |
+| Publicar na Vercel, em vez do (ou além do) Firebase Hosting | [VERCEL.md](VERCEL.md) |
 | Avisos de pedido novo (painel e e-mail) | [AVISOS.md](AVISOS.md) |
 | Google, sitemap e prévia no WhatsApp | [SEO.md](SEO.md) — publique sempre com `npm run deploy` |
 

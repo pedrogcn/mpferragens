@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "description": "Loja virtual MP Ferragens",
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "seo": "node tools/build-seo.js",
     "deploy": "node tools/build-seo.js && firebase deploy"

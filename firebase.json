@@ -10,7 +10,9 @@
       "*.md",
       "tools/**",
       "package.json",
-      "package-lock.json"
+      "package-lock.json",
+      "vercel.json",
+      ".vercelignore"
     ],
     "rewrites": [
       { "source": "/produto/**", "destination": "/index.html" },

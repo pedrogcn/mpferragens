@@ -191,6 +191,7 @@
       'auth/too-many-requests': 'Muitas tentativas. Aguarde alguns minutos e tente de novo.',
       'auth/network-request-failed': 'Sem conexão com o servidor. Verifique a internet.',
       'auth/requires-recent-login': 'Por segurança, saia e entre novamente antes de trocar a senha.',
+      'auth/unauthorized-domain': 'Este endereço do site ainda não foi autorizado no Firebase (Authentication > Configurações > Domínios autorizados).',
       'unavailable': 'Sem conexão com o servidor. Verifique a internet e tente de novo.',
       'deadline-exceeded': 'O servidor demorou para responder. Tente de novo.',
       'permission-denied': 'O servidor recusou a operação. Avise o responsável pelo site (regras do banco).'
