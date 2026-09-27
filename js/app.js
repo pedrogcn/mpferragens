@@ -78,7 +78,9 @@
   };
 
   if (MP.cloud.enabled) {
-    U.$('#app').innerHTML = '<p class="boot-msg" style="padding:80px 16px;text-align:center">Carregando…</p>';
+    // esqueleto da home (em vez de "Carregando…"): a pessoa vê o formato do site na hora,
+    // enquanto os dados de verdade ainda estão chegando do servidor.
+    U.$('#app').innerHTML = MP.pages.skeleton ? MP.pages.skeleton('home') : '<p class="boot-msg" style="padding:80px 16px;text-align:center">Carregando…</p>';
     MP.cloud.boot().then(start, (e) => {
       console.error(e);
       const perm = e && e.code === 'permission-denied';
