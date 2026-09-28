@@ -128,7 +128,20 @@
 
       ${rel.length ? `<section class="section"><h2 class="section-title left">PRODUTOS RELACIONADOS</h2><div class="pgrid">${rel.map((r) => C.productCard(r)).join('')}</div></section>` : ''}
     </div>`;
-    return { title: `${p.name} ${p.variant}`.trim(), description: `${p.name} ${p.variant}`.trim() + ` por ${brl(p.price)}. ${p.desc || ''}`.slice(0, 200), html };
+    return {
+      title: `${p.name} ${p.variant}`.trim(),
+      description: `${p.name} ${p.variant}`.trim() + ` por ${brl(p.price)}. ${p.desc || ''}`.slice(0, 200),
+      html,
+      mount: (app) => {
+        if (!MP.cloud.enabled) return;
+        const ids = [p.id].concat(rel.map((r) => r.id));
+        MP.cloud.fetchImages(ids).then(() => {
+          const gal = U.$('[data-gallery]', app);
+          if (gal) gal.outerHTML = C.gallery(p); // a foto de p.id já está em cache; redesenha a galeria com ela
+          C.refreshCards(app);
+        });
+      }
+    };
   };
 
   /* link "limpo" da página do produto: mostra foto, nome e preço na prévia do WhatsApp (depois de rodar npm run seo e publicar) */

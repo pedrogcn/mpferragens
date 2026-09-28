@@ -245,8 +245,13 @@
       after += out.length;
       return out;
     };
-    for (const pr of MP.data.products.all()) {
-      const list = pr.images || [];
+    const allProducts = MP.data.products.all();
+    if (MP.cloud.enabled) await MP.cloud.fetchImages(allProducts.map((pr) => pr.id)); // fotos ficam à parte; busca todas de uma vez aqui
+    for (const pr of allProducts) {
+      // se o produto ainda não tem foto no lugar novo (salvo antes desta atualização do site), usa a que
+      // já vier junto dele, em vez de tratar como "sem foto"
+      const cached = MP.cloud.enabled ? MP.cloud.imagesFor(pr.id) : null;
+      const list = (cached && cached.length ? cached : pr.images) || [];
       const out = [];
       for (const src of list) out.push(await shrink(src, 600));
       if (out.some((x, i) => x !== list[i])) {

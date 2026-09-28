@@ -60,6 +60,17 @@
     </article>`;
   };
 
+  /* Depois que MP.cloud.fetchImages(ids) traz as fotos de verdade, troca a ilustração pela foto real
+     nos cards já desenhados na tela (sem precisar redesenhar a página inteira). */
+  C.refreshCards = (root) => {
+    U.$$('.pcard[data-id]', root).forEach((el) => {
+      const p = MP.catalog.byId(el.dataset.id);
+      if (!p) return;
+      const img = el.querySelector('.pcard-img img');
+      if (img) img.src = MP.art.main(p);
+    });
+  };
+
   C.categoryCard = (c) =>
     `<a class="ccard" href="#/categoria/${esc(c.slug)}"><span class="ccard-img"><img src="${esc(c.image || MP.art.url(c.art || MP.art.fallback(c.slug), 0))}" alt="" loading="lazy"></span><span class="ccard-name">${esc(c.short || c.name)}</span></a>`;
 

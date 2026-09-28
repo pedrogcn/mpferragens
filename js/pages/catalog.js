@@ -174,7 +174,14 @@
         </section>
       </div>
     </div>`;
-    return { title: docTitle || title, html };
+    return {
+      title: docTitle || title,
+      html,
+      mount: (app) => {
+        // só busca a foto dos produtos desta página (até 12) — não do catálogo inteiro
+        if (MP.cloud.enabled) MP.cloud.fetchImages(items.map((p) => p.id)).then(() => C.refreshCards(app));
+      }
+    };
   };
 
   MP.pages.category = (ctx) => {

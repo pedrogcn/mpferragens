@@ -628,6 +628,11 @@ const variantTransform = (v, type) => {
     fallback: (cat) => CAT_FALLBACK[cat] || { type: 'squareTube' },
     images(p) {
       if (p.images && p.images.length) return p.images;
+      // com a nuvem ligada, a foto do produto é buscada à parte (MP.cloud.fetchImages) e fica aqui em cache
+      if (MP.cloud && MP.cloud.enabled) {
+        const cached = MP.cloud.imagesFor(p.id);
+        if (cached && cached.length) return cached;
+      }
       const spec = p.art || CAT_FALLBACK[p.category] || { type: 'squareTube' };
       return [build(spec, 0), build(spec, 1), build(spec, 2)];
     },

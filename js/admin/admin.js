@@ -140,9 +140,12 @@
     return v.trim();
   };
 
-  A.openForm = (key, id) => {
+  A.openForm = async (key, id) => {
     const r = RES[key];
-    const item = id ? r.coll.get(id) : r.blank();
+    let item = id ? r.coll.get(id) : r.blank();
+    // ex.: produtos — a foto não vem junto de r.coll.get() (fica à parte); busca antes de abrir o formulário,
+    // senão o formulário abriria "sem foto" e salvar sem reenviar uma nova apagaria a foto do produto.
+    if (id && r.hydrate) item = await r.hydrate(item);
     const vals = r.toForm ? r.toForm(item) : item;
     MP.ui.modal({
       title: (id ? 'Editar ' : 'Novo(a) ') + r.singular,
@@ -200,7 +203,7 @@
     return `<div class="card admin-card">${opts.search ? `<div class="admin-tools"><input type="search" placeholder="Filtrar…" data-input="admin-filter" aria-label="Filtrar lista"></div>` : ''}
       <div class="table-scroll"><table class="admin-table"><thead><tr>${cols.map((c) => `<th>${c.h}</th>`).join('')}<th class="td-act">Ações</th></tr></thead><tbody>${rows
         .map(
-          (it) => `<tr>${cols.map((c) => `<td data-label="${esc(c.h)}">${c.r(it)}</td>`).join('')}<td class="td-act"><button class="icon-btn" data-action="admin-edit" data-res="${key}" data-id="${esc(it.id)}" aria-label="Editar">${MP.icon('edit', 18)}</button><button class="icon-btn" data-action="admin-del" data-res="${key}" data-id="${esc(it.id)}" aria-label="Excluir">${MP.icon('trash', 18)}</button></td></tr>`
+          (it) => `<tr data-id="${esc(it.id)}">${cols.map((c) => `<td data-label="${esc(c.h)}">${c.r(it)}</td>`).join('')}<td class="td-act"><button class="icon-btn" data-action="admin-edit" data-res="${key}" data-id="${esc(it.id)}" aria-label="Editar">${MP.icon('edit', 18)}</button><button class="icon-btn" data-action="admin-del" data-res="${key}" data-id="${esc(it.id)}" aria-label="Excluir">${MP.icon('trash', 18)}</button></td></tr>`
         )
         .join('')}${rows.length ? '' : `<tr><td colspan="${cols.length + 1}" class="muted center">Nada cadastrado ainda.</td></tr>`}</tbody></table></div></div>`;
   };
@@ -213,6 +216,14 @@
   RES.produtos = {
     coll: MP.data.products, singular: 'produto', label: (p) => p.name + ' ' + p.variant,
     blank: () => ({ id: U.uid('p'), name: '', variant: '', category: (MP.catalog.categories()[0] || {}).slug || '', type: '', brand: '', price: 0, oldPrice: null, cardPrice: null, wholesalePrice: null, wholesaleMin: 10, desc: '', longDesc: '', units: null, specs: {}, images: [], art: null, rating: 5, reviews: 0, sold: 0, createdAt: new Date().toISOString().slice(0, 10), stock: 0, featured: false, active: true }),
+    hydrate: async (item) => {
+      if (!MP.cloud.enabled) return item;
+      await MP.cloud.fetchImages([item.id]);
+      const cached = MP.cloud.imagesFor(item.id);
+      // se ainda não existir foto no lugar novo (produto salvo antes desta atualização do site), usa a
+      // que já vier junto do produto, em vez de apagar a foto sem querer.
+      return Object.assign({}, item, { images: (cached && cached.length ? cached : item.images) || [] });
+    },
     fields: [
       { name: 'name', label: 'Nome', required: true },
       { name: 'variant', label: 'Variação / medida', help: 'Ex.: 12 metros - Gerdau' },
@@ -336,14 +347,25 @@
 
   page.produtos = () => {
     const rows = MP.data.products.all().slice().sort((a, b) => a.name.localeCompare(b.name));
-    return A.shell('produtos', 'Produtos', table('produtos', [
+    return Object.assign(A.shell('produtos', 'Produtos', table('produtos', [
       { h: 'Produto', r: (p) => `<div class="cell-prod">${thumb(MP.art.main(p))}<span><b>${esc(p.name)}</b><small>${esc(p.variant)}</small></span></div>` },
       { h: 'Categoria', r: (p) => esc((MP.catalog.category(p.category) || {}).name || '—') },
       { h: 'Preço', r: (p) => brl(p.price) },
       { h: 'Estoque', r: (p) => `<span class="${p.stock <= 5 ? 'text-err' : ''}">${p.stock}</span>` },
       { h: 'Status', r: (p) => chip(p.active !== false) }
     ], rows, { search: true }),
-    (MP.data.products.get('mp001') ? '' : `<button class="btn btn-outline" data-action="admin-import-mp">${MP.icon('upload', 16)} Importar produtos dos folhetos</button> `) + addBtn('produtos', 'Novo produto'));
+    (MP.data.products.get('mp001') ? '' : `<button class="btn btn-outline" data-action="admin-import-mp">${MP.icon('upload', 16)} Importar produtos dos folhetos</button> `) + addBtn('produtos', 'Novo produto')), {
+      mount: (app) => {
+        if (!MP.cloud.enabled) return;
+        MP.cloud.fetchImages(rows.map((p) => p.id)).then(() => {
+          U.$$('.admin-table tbody tr[data-id]', app).forEach((tr) => {
+            const p = MP.catalog.byId(tr.dataset.id);
+            const img = tr.querySelector('.thumb-sm');
+            if (p && img) img.src = MP.art.main(p);
+          });
+        });
+      }
+    });
   };
 
   /* Importa os produtos reais (seed-mp.js) e, se quiser, apaga os de demonstração. */

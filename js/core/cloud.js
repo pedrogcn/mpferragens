@@ -31,6 +31,14 @@
   const COLLECTIONS = ['products', 'banners']; // 1 documento do Firestore por item
   const MERGED = ['categories', 'coupons', 'promotions']; // cada tipo inteiro vira 1 documento (catalog/<tipo>)
   const MAX_DOC = 900 * 1024; // limite do Firestore é 1 MiB por documento
+  /*
+   * As fotos dos produtos NÃO ficam mais dentro do documento do produto (products/{id}); ficam à parte,
+   * em productImages/{id}. Assim, a ficha do produto (nome, preço, estoque) é sempre leve, e o site só
+   * busca a foto de um produto na hora em que ele realmente vai aparecer na tela — não de todos de uma
+   * vez. Isso é o que permite o catálogo crescer (centenas de produtos) sem o site ficar mais lento.
+   */
+  const IMG_COLL = 'productImages';
+  const pendingImg = {}; // evita pedir a mesma foto duas vezes enquanto ela ainda está a caminho
 
   const state = { user: null, isAdmin: false, activeUid: undefined, activePromise: null, newProfile: null, userSubs: [], booted: false, seenOrders: null };
   let fb, auth, db;
@@ -39,6 +47,7 @@
     enabled,
     mem: { users: [], orders: [] }, // espelho em memória (nunca vai para o localStorage)
     settings: {},
+    imgCache: {}, // fotos de produto já buscadas: { id: [urls] }
     owns: (name) => enabled && OWNED.includes(name),
     isAdmin: () => state.isAdmin,
     uid: () => (state.user ? state.user.uid : null)
@@ -98,23 +107,75 @@
     });
 
   /* ---------- gravação ---------- */
+  const withoutImages = (item) => {
+    const rest = Object.assign({}, item);
+    delete rest.images;
+    return rest;
+  };
   cloud.fits = (name, item) => {
     if (MERGED.includes(name)) {
       // cabe tudo do tipo (existentes + este item) dentro de 1 documento?
       const rest = (cloud.mem[name] || []).filter((x) => x.id !== item.id);
       return JSON.stringify(Object.fromEntries(rest.concat(item).map((x) => [x.id, x]))).length < MAX_DOC;
     }
+    if (name === 'products') {
+      // ficha do produto e fotos são 2 documentos separados agora: cada um precisa caber sozinho
+      return JSON.stringify(withoutImages(item)).length < MAX_DOC && JSON.stringify({ images: item.images || [] }).length < MAX_DOC;
+    }
     return JSON.stringify(item).length < MAX_DOC;
   };
   cloud.push = (name, item) => {
     if (MERGED.includes(name)) return db.doc('catalog/' + name).set({ [item.id]: clean(item) }, { merge: true }).catch(fail('gravar ' + name));
+    if (name === 'products') {
+      const batch = db.batch();
+      batch.set(db.collection('products').doc(item.id), clean(withoutImages(item)));
+      batch.set(db.doc(IMG_COLL + '/' + item.id), clean({ images: item.images || [] }));
+      return batch.commit().then(() => { cloud.imgCache[item.id] = item.images || []; }).catch(fail('gravar ' + name));
+    }
     return db.collection(name).doc(item.id).set(clean(item)).catch(fail('gravar ' + name));
   };
   cloud.drop = (name, id) => {
     if (MERGED.includes(name)) return db.doc('catalog/' + name).update({ [id]: fb.firestore.FieldValue.delete() }).catch(fail('apagar ' + name));
+    if (name === 'products') {
+      const batch = db.batch();
+      batch.delete(db.collection('products').doc(id));
+      batch.delete(db.doc(IMG_COLL + '/' + id));
+      return batch.commit().then(() => { delete cloud.imgCache[id]; }).catch(fail('apagar ' + name));
+    }
     return db.collection(name).doc(id).delete().catch(fail('apagar ' + name));
   };
   cloud.pushSettings = (obj) => db.doc('config/settings').set(clean(obj)).catch(fail('gravar configurações'));
+
+  /*
+   * Busca as fotos de uma lista de produtos (as que ainda não estão em memória), em lotes de até 30 —
+   * é o que os cards, a galeria da página do produto e o painel chamam depois de desenhar a tela, só
+   * para os produtos que realmente apareceram. Uma vez buscada, a foto fica em memória (cloud.imgCache)
+   * e não é pedida de novo nesta visita.
+   */
+  cloud.imagesFor = (id) => cloud.imgCache[id];
+  cloud.fetchImages = (ids) => {
+    if (!enabled) return Promise.resolve();
+    const need = Array.from(new Set(ids)).filter((id) => id && !(id in cloud.imgCache) && !pendingImg[id]);
+    if (!need.length) return Promise.resolve();
+    need.forEach((id) => (pendingImg[id] = true));
+    const chunks = [];
+    for (let i = 0; i < need.length; i += 30) chunks.push(need.slice(i, i + 30));
+    return Promise.all(
+      chunks.map((chunk) =>
+        db.collection(IMG_COLL).where(fb.firestore.FieldPath.documentId(), 'in', chunk).get()
+          .then((snap) => {
+            const found = new Set();
+            snap.docs.forEach((d) => {
+              cloud.imgCache[d.id] = (d.data() || {}).images || [];
+              found.add(d.id);
+            });
+            chunk.forEach((id) => !found.has(id) && (cloud.imgCache[id] = []));
+          })
+          .catch((e) => console.error('[nuvem] fotos do produto', e))
+          .then(() => chunk.forEach((id) => delete pendingImg[id]))
+      )
+    );
+  };
 
   cloud.newOrderNumber = () => {
     // sem contador central (não dá para abrir o WhatsApp de forma assíncrona): tempo em base 36 + 1 caractere aleatório
@@ -138,7 +199,10 @@
         batch = db.batch();
       }
     };
-    for (const item of MP.seed.products) await put(db.collection('products').doc(item.id), clean(item));
+    for (const item of MP.seed.products) {
+      await put(db.collection('products').doc(item.id), clean(withoutImages(item)));
+      await put(db.doc(IMG_COLL + '/' + item.id), clean({ images: item.images || [] }));
+    }
     for (const item of MP.seed.banners) await put(db.collection('banners').doc(item.id), clean(item));
     const asMap = (arr) => Object.fromEntries(arr.map((it) => [it.id, clean(it)]));
     await put(db.doc('catalog/categories'), asMap(MP.seed.categories), { merge: true });

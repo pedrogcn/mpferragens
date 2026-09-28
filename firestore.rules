@@ -29,6 +29,13 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAdmin();
     }
+    // Fotos dos produtos, à parte da ficha (products/{id}): o site busca só as que vai mostrar na tela,
+    // em vez de baixar a foto de todo o catálogo de uma vez — é o que mantém o site rápido conforme
+    // o número de produtos cresce.
+    match /productImages/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
     match /banners/{id} {
       allow read: if true;
       allow write: if isAdmin();

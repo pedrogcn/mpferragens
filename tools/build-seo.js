@@ -162,7 +162,11 @@ if (!${BOTS}.test(navigator.userAgent)) location.replace('/#${appPath}');
 /* ---------- principal ---------- */
 (async () => {
   console.log(`Site: ${SITE}  ·  Projeto Firebase: ${PROJECT}`);
-  const [settings, prodsAll, cats] = await Promise.all([fetchSettings(), fetchCollection('products'), fetchMergedDoc('categories')]);
+  const [settings, prodsAll0, cats, prodImgs] = await Promise.all([fetchSettings(), fetchCollection('products'), fetchMergedDoc('categories'), fetchCollection('productImages')]);
+  // a foto do produto fica num documento à parte (productImages/{id}); junta de volta só para gerar a prévia
+  const imgById = {};
+  prodImgs.forEach((d) => (imgById[d.id] = d.images || []));
+  const prodsAll = prodsAll0.map((p) => Object.assign({}, p, { images: (p.images && p.images.length ? p.images : imgById[p.id]) || [] }));
   const prods = prodsAll.filter((p) => p.active !== false && safeSlug(p.slug));
   const catBy = {};
   cats.forEach((c) => (catBy[c.slug] = c));

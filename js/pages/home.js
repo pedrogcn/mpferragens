@@ -153,6 +153,16 @@
         <h2 class="section-title">ONDE ESTAMOS</h2>
         ${MP.pages.locationBlock()}
       </section>`;
-    return { title: 'Materiais de construção e ferragens', html, mount: (app) => { initCarousel(U.$('.hero', app)); initBenefits(U.$('.benefits', app)); } };
+    const shown = Array.from(new Set([].concat(featured, best, deals, fresh).map((p) => p.id)));
+    return {
+      title: 'Materiais de construção e ferragens',
+      html,
+      mount: (app) => {
+        initCarousel(U.$('.hero', app));
+        initBenefits(U.$('.benefits', app));
+        // as fichas dos produtos já chegaram; as fotos são buscadas à parte, só das que aparecem aqui
+        if (MP.cloud.enabled) MP.cloud.fetchImages(shown).then(() => C.refreshCards(app));
+      }
+    };
   };
 })(window.MP);
