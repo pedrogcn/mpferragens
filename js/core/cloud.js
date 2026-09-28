@@ -61,6 +61,17 @@
       document.head.appendChild(s);
     });
 
+  /*
+   * O SDK do Firebase (3 arquivos, ~500 KB) começa a baixar JÁ, assim que este arquivo roda — não quando
+   * o site termina de montar a página (js/app.js, que é o último script e só executa depois de todos os
+   * outros). Antes disso, o celular baixava primeiro ~20 arquivos do site para só then começar a baixar
+   * o Firebase; agora as duas coisas acontecem ao mesmo tempo, o que evita uma etapa inteira de espera
+   * extra no celular (isso sozinho pode significar segundos a menos até o catálogo aparecer).
+   */
+  const sdkReady = enabled
+    ? loadScript(SDK + 'firebase-app-compat.js').then(() => Promise.all([loadScript(SDK + 'firebase-auth-compat.js'), loadScript(SDK + 'firebase-firestore-compat.js')]))
+    : Promise.resolve();
+
   const docs = (snap) => snap.docs.map((d) => Object.assign({ id: d.id }, d.data()));
 
   /* Retorna uma Promise que resolve no 1º retorno (dados ou erro) e mantém o listener ativo. */
@@ -291,16 +302,8 @@
   /* ---------- inicialização (chamada por app.js antes de desenhar o site) ---------- */
   cloud.boot = () => {
     const run = async () => {
-      // baixa os 3 arquivos do Firebase em paralelo; a ordem de EXECUÇÃO continua sendo app → auth/firestore
-      ['firebase-auth-compat.js', 'firebase-firestore-compat.js'].forEach((f) => {
-        const link = document.createElement('link');
-        link.rel = 'preload';
-        link.as = 'script';
-        link.href = SDK + f;
-        document.head.appendChild(link);
-      });
-      await loadScript(SDK + 'firebase-app-compat.js');
-      await Promise.all([loadScript(SDK + 'firebase-auth-compat.js'), loadScript(SDK + 'firebase-firestore-compat.js')]);
+      // o download já foi iniciado lá em cima (sdkReady), assim que este arquivo carregou; aqui só esperamos terminar
+      await sdkReady;
       fb = window.firebase;
       fb.initializeApp(cfg);
       auth = fb.auth();
