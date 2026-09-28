@@ -81,10 +81,15 @@
 
 .benefits { background: var(--yellow); color: #111; }
 .benefits ul { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; padding-block: 14px; }
-.benefits li { display: flex; align-items: center; gap: 12px; }
-.benefits li div { display: flex; flex-direction: column; line-height: 1.15; }
+.benefits li { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.benefits li div { display: flex; flex-direction: column; line-height: 1.15; min-width: 0; }
+.benefits li svg { flex: none; }
+.benefits li b, .benefits li span { overflow-wrap: break-word; }
 .benefits b { font-weight: 800; font-size: 15px; }
 .benefits span { font-size: 14px; font-weight: 500; }
+.benefits-dots { display: none; justify-content: center; gap: 6px; padding-bottom: 12px; }
+.benefits-dots span { width: 6px; height: 6px; border-radius: 50%; background: rgba(17, 17, 17, 0.28); transition: width 0.15s, border-radius 0.15s; }
+.benefits-dots span.is-on { width: 16px; border-radius: 4px; background: #111; }
 
 /* ============ Categorias ============ */
 .cat-row { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 12px; }
@@ -256,6 +261,15 @@
   .pcard-list .pcard-img { width: 100%; }
   .foot-grid { grid-template-columns: 1fr; }
   .wa-float { width: 52px; height: 52px; bottom: 14px; right: 14px; }
+  /* faixa de benefícios: 1 por vez, arrastando (só no celular).
+     O <ul> perde o padding herdado do .container (senão o "100%" de cada item fica menor que a
+     área visível de rolagem, e o encaixe de cada item para de bater com o item seguinte) — o respiro
+     nas bordas volta como padding de cada item, não do <ul>. */
+  .benefits ul { display: flex; grid-template-columns: none; overflow-x: auto; scroll-snap-type: x mandatory; gap: 0; padding: 16px 0 10px; scrollbar-width: none; }
+  .benefits ul::-webkit-scrollbar { display: none; }
+  .benefits li { flex: 0 0 100%; justify-content: center; scroll-snap-align: center; text-align: center; padding-inline: 16px; box-sizing: border-box; }
+  .benefits li div { align-items: center; }
+  .benefits-dots { display: flex; }
 }
 
 /* preço de atacado */

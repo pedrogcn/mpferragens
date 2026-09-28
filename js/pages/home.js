@@ -84,11 +84,27 @@
     U.$$('[data-panel]', wrap).forEach((p) => (p.hidden = p.dataset.panel !== el.dataset.tab));
   });
 
-  const benefits = () => `<section class="benefits no-print" aria-label="Benefícios"><ul class="container">
+  const benefits = () => `<section class="benefits no-print" aria-label="Benefícios">
+      <ul class="container">
       <li>${MP.icon('truck', 38)}<div><b>Entrega rápida</b><span>em Manaus</span></div></li>
       <li>${MP.icon('coin', 38)}<div><b>Melhores</b><span>preços</span></div></li>
       <li>${MP.icon('card', 38)}<div><b>Pagamento facilitado</b><span>cartão, PIX e Crediário Bemol</span></div></li>
-      <li>${MP.icon('headset', 38)}<div><b>Atendimento</b><span>especializado</span></div></li></ul></section>`;
+      <li>${MP.icon('headset', 38)}<div><b>Atendimento</b><span>especializado</span></div></li></ul>
+      <div class="benefits-dots" aria-hidden="true"><span class="is-on"></span><span></span><span></span><span></span></div>
+    </section>`;
+
+  /* no celular, a faixa de benefícios vira um carrossel (1 por vez, arrastando); os pontinhos acompanham */
+  const initBenefits = (root) => {
+    if (!root) return;
+    const list = U.$('ul', root);
+    const dots = U.$$('.benefits-dots span', root);
+    if (!list || !dots.length) return;
+    const sync = () => {
+      const i = Math.round(list.scrollLeft / (list.clientWidth || 1));
+      dots.forEach((d, n) => d.classList.toggle('is-on', n === i));
+    };
+    list.addEventListener('scroll', sync, { passive: true });
+  };
 
   MP.pages.home = () => {
     const banners = MP.data.banners.all().filter((b) => b.active !== false).sort((a, b) => (a.order || 0) - (b.order || 0));
@@ -129,6 +145,6 @@
         <h2 class="section-title">ONDE ESTAMOS</h2>
         ${MP.pages.locationBlock()}
       </section>`;
-    return { title: 'Materiais de construção e ferragens', html, mount: (app) => initCarousel(U.$('.hero', app)) };
+    return { title: 'Materiais de construção e ferragens', html, mount: (app) => { initCarousel(U.$('.hero', app)); initBenefits(U.$('.benefits', app)); } };
   };
 })(window.MP);
