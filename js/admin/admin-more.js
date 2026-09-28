@@ -183,10 +183,8 @@
       ${MP.cloud.enabled
         ? `<div class="card"><h2>Dados na nuvem</h2>
         <p class="muted">Produtos, pedidos, clientes e configurações ficam salvos no Firebase e aparecem para todos em tempo real. O Google mantém o banco replicado, mas o plano gratuito não faz cópias programadas: cuidado ao apagar produtos ou pedidos, pois não dá para desfazer.</p>
-        <div class="row-actions wrap"><button class="btn btn-outline" data-action="admin-seed">${MP.icon('upload', 16)} Publicar / recriar catálogo de demonstração</button>
-        <button class="btn btn-outline" data-action="admin-optimize">${MP.icon('refresh', 16)} Otimizar fotos do site</button></div>
-        <p class="muted small">“Otimizar fotos” reduz as fotos já cadastradas (produtos e categorias) para o site abrir mais rápido no celular. Pode rodar quando quiser; fotos já pequenas não são alteradas.</p>
-        <p class="muted small">Atenção: publicar o catálogo de demonstração sobrescreve produtos, categorias, banners e cupons que tenham os mesmos códigos internos.</p></div>`
+        <div class="row-actions wrap"><button class="btn btn-outline" data-action="admin-optimize">${MP.icon('refresh', 16)} Otimizar fotos do site</button></div>
+        <p class="muted small">“Otimizar fotos” reduz as fotos já cadastradas (produtos e categorias) para o site abrir mais rápido no celular. Pode rodar quando quiser; fotos já pequenas não são alteradas.</p></div>`
         : `<div class="card"><h2>Dados e backup</h2>
         <p class="muted">Os dados do site ficam salvos neste navegador. Faça backup para levar para outro computador ou antes de limpar o navegador.</p>
         <div class="row-actions wrap"><button class="btn btn-outline" data-action="admin-export">${MP.icon('download', 16)} Exportar backup (JSON)</button>

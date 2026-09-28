@@ -111,12 +111,17 @@
     return t + Math.floor(Math.random() * 36).toString(36).toUpperCase();
   };
 
-  /* publica o catálogo de demonstração (categorias, produtos, banners, cupons) no Firestore */
+  /*
+   * Publica o catálogo de demonstração (categorias, produtos, banners, cupons) no Firestore.
+   * IMPORTANTE: as categorias e cupons usam merge:true (soma às que já existem) — nunca um "set" puro,
+   * que substituiria o documento inteiro e apagaria categorias/cupons reais que não vieram do seed
+   * (foi exatamente isso que apagou "Telhado e Calhas" e "Solda" na primeira versão deste código).
+   */
   cloud.seedCatalog = async () => {
     let batch = db.batch();
     let n = 0;
-    const put = async (ref, data) => {
-      batch.set(ref, data);
+    const put = async (ref, data, opts) => {
+      batch.set(ref, data, opts);
       if (++n % 400 === 0) {
         await batch.commit();
         batch = db.batch();
@@ -125,8 +130,8 @@
     for (const item of MP.seed.products) await put(db.collection('products').doc(item.id), clean(item));
     for (const item of MP.seed.banners) await put(db.collection('banners').doc(item.id), clean(item));
     const asMap = (arr) => Object.fromEntries(arr.map((it) => [it.id, clean(it)]));
-    await put(db.doc('catalog/categories'), asMap(MP.seed.categories));
-    await put(db.doc('catalog/coupons'), asMap(MP.seed.coupons));
+    await put(db.doc('catalog/categories'), asMap(MP.seed.categories), { merge: true });
+    await put(db.doc('catalog/coupons'), asMap(MP.seed.coupons), { merge: true });
     await batch.commit();
   };
 
