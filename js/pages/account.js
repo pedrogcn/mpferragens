@@ -51,7 +51,7 @@
         <label class="sort">Status <select data-change="orders-filter" aria-label="Filtrar por status"><option value="">Ver todos</option>${MP.ORDER_STATUS.map((s) => `<option ${st === s ? 'selected' : ''}>${s}</option>`).join('')}</select></label></div>
       ${list.length
         ? `<table class="orders-table"><thead><tr><th>Pedido</th><th>Status</th><th>Valor</th><th>Data</th></tr></thead><tbody>${list
-            .map((o) => `<tr><td data-label="Pedido"><a href="#/conta/pedidos/${o.id}"><b>#${esc(o.id)}</b></a></td><td data-label="Status">${badge(o.status)}</td><td data-label="Valor">${brl(o.total)}</td><td data-label="Data">${U.fmtDate(o.createdAt)}</td></tr>`)
+            .map((o) => `<tr><td data-label="Pedido"><a href="#/conta/pedidos/${o.id}"><b>#${esc(o.id)}</b></a></td><td data-label="Status">${badge(o.status)}</td><td data-label="Valor">${brl(o.total)}</td><td data-label="Data">${U.fmtDateTime(o.createdAt)}</td></tr>`)
             .join('')}</tbody></table>`
         : C.emptyState({ icon: 'clipboard', title: 'Nenhum pedido por aqui', text: st ? 'Nenhum pedido com este status.' : 'Quando você enviar um orçamento pelo WhatsApp, ele aparece aqui.', action: '<a class="btn btn-primary" href="#/busca">Ver produtos</a>' })}
     </div>`;
