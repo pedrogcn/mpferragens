@@ -96,8 +96,8 @@
       },
       save(item) {
         if (cloudOn()) {
-          if (!MP.cloud.fits(item)) {
-            if (MP.ui) MP.ui.toast('Registro grande demais para salvar (limite de 1 MB). Use fotos menores ou menos fotos.', 'error');
+          if (!MP.cloud.fits(name, item)) {
+            if (MP.ui) MP.ui.toast('Registro grande demais para salvar (limite de 1 MB por documento). Use fotos menores/menos fotos, ou reduza a quantidade de itens.', 'error');
             return null;
           }
           const a = MP.cloud.mem[name];

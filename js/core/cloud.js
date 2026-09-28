@@ -1,9 +1,14 @@
 /*
  * Camada de nuvem (Firebase Auth + Firestore). Só é ativada quando js/firebase-config.js define MP_FIREBASE.
- * Estratégia: cada coleção é espelhada em memória por listeners em tempo real; leituras continuam síncronas
- * (MP.data.*.all()) e as gravações vão para o Firestore sem mudar o restante do código.
+ * Estratégia: cada coleção pública é espelhada em memória por listeners em tempo real; leituras continuam
+ * síncronas (MP.data.*.all()) e as gravações vão para o Firestore sem mudar o restante do código.
  *
- *  - catálogo (produtos, categorias, banners, promoções, cupons, loja): leitura pública, escrita só do admin
+ *  - produtos e banners: 1 documento por item (podem ter fotos grandes; cada um tem seu próprio limite de 1 MB)
+ *  - categorias, cupons e promoções: cada tipo inteiro cabe em 1 único documento (catalog/<tipo>), um mapa
+ *    { id: item }. São sempre pequenos (sem foto em alta ou só com foto pequena), então 1 leitura no lugar
+ *    de várias não corre risco de estourar o limite de 1 MB — o que economiza bastante da cota gratuita de
+ *    leituras do Firestore em lojas com muitas categorias/cupons.
+ *  - configurações da loja: já era 1 documento único (config/settings)
  *  - users:  cada cliente lê/grava o próprio cadastro; o admin lê todos
  *  - orders: qualquer visitante cria; o cliente lê os seus; o admin lê e altera todos (status)
  *  - admin = usuário que possui o documento admins/{uid} (criado à mão no console do Firebase)
@@ -23,6 +28,8 @@
   const SDK = 'js/vendor/firebase/';
   const PUBLIC = ['products', 'categories', 'banners', 'promotions', 'coupons'];
   const OWNED = PUBLIC.concat(['users', 'orders']);
+  const COLLECTIONS = ['products', 'banners']; // 1 documento do Firestore por item
+  const MERGED = ['categories', 'coupons', 'promotions']; // cada tipo inteiro vira 1 documento (catalog/<tipo>)
   const MAX_DOC = 900 * 1024; // limite do Firestore é 1 MiB por documento
 
   const state = { user: null, isAdmin: false, activeUid: undefined, activePromise: null, newProfile: null, userSubs: [], booted: false, seenOrders: null };
@@ -80,9 +87,22 @@
     });
 
   /* ---------- gravação ---------- */
-  cloud.fits = (item) => JSON.stringify(item).length < MAX_DOC;
-  cloud.push = (name, item) => db.collection(name).doc(item.id).set(clean(item)).catch(fail('gravar ' + name));
-  cloud.drop = (name, id) => db.collection(name).doc(id).delete().catch(fail('apagar ' + name));
+  cloud.fits = (name, item) => {
+    if (MERGED.includes(name)) {
+      // cabe tudo do tipo (existentes + este item) dentro de 1 documento?
+      const rest = (cloud.mem[name] || []).filter((x) => x.id !== item.id);
+      return JSON.stringify(Object.fromEntries(rest.concat(item).map((x) => [x.id, x]))).length < MAX_DOC;
+    }
+    return JSON.stringify(item).length < MAX_DOC;
+  };
+  cloud.push = (name, item) => {
+    if (MERGED.includes(name)) return db.doc('catalog/' + name).set({ [item.id]: clean(item) }, { merge: true }).catch(fail('gravar ' + name));
+    return db.collection(name).doc(item.id).set(clean(item)).catch(fail('gravar ' + name));
+  };
+  cloud.drop = (name, id) => {
+    if (MERGED.includes(name)) return db.doc('catalog/' + name).update({ [id]: fb.firestore.FieldValue.delete() }).catch(fail('apagar ' + name));
+    return db.collection(name).doc(id).delete().catch(fail('apagar ' + name));
+  };
   cloud.pushSettings = (obj) => db.doc('config/settings').set(clean(obj)).catch(fail('gravar configurações'));
 
   cloud.newOrderNumber = () => {
@@ -93,18 +113,20 @@
 
   /* publica o catálogo de demonstração (categorias, produtos, banners, cupons) no Firestore */
   cloud.seedCatalog = async () => {
-    const sets = [['categories', MP.seed.categories], ['products', MP.seed.products], ['banners', MP.seed.banners], ['coupons', MP.seed.coupons]];
     let batch = db.batch();
     let n = 0;
-    for (const [name, arr] of sets) {
-      for (const item of arr) {
-        batch.set(db.collection(name).doc(item.id), clean(item));
-        if (++n % 400 === 0) {
-          await batch.commit();
-          batch = db.batch();
-        }
+    const put = async (ref, data) => {
+      batch.set(ref, data);
+      if (++n % 400 === 0) {
+        await batch.commit();
+        batch = db.batch();
       }
-    }
+    };
+    for (const item of MP.seed.products) await put(db.collection('products').doc(item.id), clean(item));
+    for (const item of MP.seed.banners) await put(db.collection('banners').doc(item.id), clean(item));
+    const asMap = (arr) => Object.fromEntries(arr.map((it) => [it.id, clean(it)]));
+    await put(db.doc('catalog/categories'), asMap(MP.seed.categories));
+    await put(db.doc('catalog/coupons'), asMap(MP.seed.coupons));
     await batch.commit();
   };
 
@@ -286,15 +308,14 @@
         console.warn('[nuvem] sem cache no aparelho:', (e && e.code) || e);
       }
 
-      const jobs = PUBLIC.map((name) =>
-        listen(db.collection(name), (snap) => {
-          const list = docs(snap);
-          const changed = state.booted && JSON.stringify(list) !== JSON.stringify(cloud.mem[name]);
-          cloud.mem[name] = list;
-          if (state.booted) MP.bus.emit('data:' + name, null);
-          if (changed) MP.bus.emit('cloud:update', name); // ex.: o cache mostrou o catálogo antigo e o servidor trouxe preço novo
-        })
-      );
+      const applyList = (name, list) => {
+        const changed = state.booted && JSON.stringify(list) !== JSON.stringify(cloud.mem[name]);
+        cloud.mem[name] = list;
+        if (state.booted) MP.bus.emit('data:' + name, null);
+        if (changed) MP.bus.emit('cloud:update', name); // ex.: o cache mostrou o catálogo antigo e o servidor trouxe preço novo
+      };
+      const jobs = COLLECTIONS.map((name) => listen(db.collection(name), (snap) => applyList(name, docs(snap))));
+      MERGED.forEach((name) => jobs.push(listen(db.doc('catalog/' + name), (snap) => applyList(name, snap.exists ? Object.values(snap.data()) : []))));
       jobs.push(
         listen(db.doc('config/settings'), (snap) => {
           const next = snap.exists ? snap.data() : {};

@@ -29,20 +29,14 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAdmin();
     }
-    match /categories/{id} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
     match /banners/{id} {
       allow read: if true;
       allow write: if isAdmin();
     }
-    match /promotions/{id} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
+    // Categorias, cupons e promoções: cada tipo inteiro fica em 1 documento (catalog/categories,
+    // catalog/coupons, catalog/promotions), em vez de 1 documento por item — economiza cota de leitura.
     // Cupons são lidos pelo navegador para validar o código; quem abrir o console consegue ver a lista.
-    match /coupons/{id} {
+    match /catalog/{id} {
       allow read: if true;
       allow write: if isAdmin();
     }

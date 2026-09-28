@@ -87,6 +87,16 @@ async function fetchCollection(name) {
   return out;
 }
 
+/* categorias/cupons/promoções ficam num único documento cada (catalog/<tipo>), um mapa { id: item } */
+async function fetchMergedDoc(name) {
+  const url = `${FIRESTORE}/v1/projects/${PROJECT}/databases/(default)/documents/catalog/${name}`;
+  const res = await fetch(url);
+  if (res.status === 404) return []; // ainda não foi publicado nada desse tipo
+  if (!res.ok) throw new Error(`Não consegui ler "catalog/${name}" no Firestore (HTTP ${res.status}). Confira se as regras foram publicadas.`);
+  const j = await res.json();
+  return Object.entries(decodeFields(j.fields || {})).map(([id, v]) => Object.assign({ id }, v));
+}
+
 async function fetchSettings() {
   // padrões da loja (mesmo arquivo usado pelo site) + o que o dono salvou em Admin > Loja
   const ctx = { MP: { util: { sha256: () => '' }, seed: {} } };
@@ -152,7 +162,7 @@ if (!${BOTS}.test(navigator.userAgent)) location.replace('/#${appPath}');
 /* ---------- principal ---------- */
 (async () => {
   console.log(`Site: ${SITE}  ·  Projeto Firebase: ${PROJECT}`);
-  const [settings, prodsAll, cats] = await Promise.all([fetchSettings(), fetchCollection('products'), fetchCollection('categories')]);
+  const [settings, prodsAll, cats] = await Promise.all([fetchSettings(), fetchCollection('products'), fetchMergedDoc('categories')]);
   const prods = prodsAll.filter((p) => p.active !== false && safeSlug(p.slug));
   const catBy = {};
   cats.forEach((c) => (catBy[c.slug] = c));
