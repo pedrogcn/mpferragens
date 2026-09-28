@@ -4,12 +4,6 @@
   const { esc } = U;
   const C = MP.components;
 
-  let timer = null;
-  MP.bus.on('route', () => {
-    clearInterval(timer);
-    timer = null;
-  });
-
   const slide = (b, i) => {
     if (b.full && b.image) {
       const lazy = i === 0 ? '' : 'loading="lazy"';
@@ -50,10 +44,15 @@
     if (!root) return;
     const count = U.$$('.hero-slide', root).length;
     if (count < 2) return;
-    const next = () => goSlide(root, Number(root.dataset.i || 0) + 1);
+    let timer = null; // próprio deste carrossel (não global): evita conflito com outras instâncias/páginas
+    const next = () => {
+      // a página pode ter mudado enquanto o timer esperava; se este banner não existe mais, o timer se desliga sozinho
+      if (!root.isConnected) return clearInterval(timer);
+      goSlide(root, Number(root.dataset.i || 0) + 1);
+    };
     const start = () => {
       clearInterval(timer);
-      timer = setInterval(next, 6500);
+      timer = setInterval(next, 5000);
     };
     root.addEventListener('mouseenter', () => clearInterval(timer));
     root.addEventListener('mouseleave', start);
@@ -90,20 +89,29 @@
       <li>${MP.icon('coin', 38)}<div><b>Melhores</b><span>preços</span></div></li>
       <li>${MP.icon('card', 38)}<div><b>Pagamento facilitado</b><span>cartão, PIX e Crediário Bemol</span></div></li>
       <li>${MP.icon('headset', 38)}<div><b>Atendimento</b><span>especializado</span></div></li></ul>
-      <div class="benefits-dots" aria-hidden="true"><span class="is-on"></span><span></span><span></span><span></span></div>
     </section>`;
 
-  /* no celular, a faixa de benefícios vira um carrossel (1 por vez, arrastando); os pontinhos acompanham */
+  /* no celular, a faixa de benefícios vira um carrossel (1 por vez) e passa sozinha a cada 7s;
+     arrastar com o dedo pausa a troca automática por um instante, para não brigar com o gesto */
   const initBenefits = (root) => {
     if (!root) return;
     const list = U.$('ul', root);
-    const dots = U.$$('.benefits-dots span', root);
-    if (!list || !dots.length) return;
-    const sync = () => {
-      const i = Math.round(list.scrollLeft / (list.clientWidth || 1));
-      dots.forEach((d, n) => d.classList.toggle('is-on', n === i));
+    if (!list) return;
+    const count = list.children.length;
+    let benefitsTimer = null; // próprio desta faixa (não global)
+    const next = () => {
+      if (!list.isConnected) return clearInterval(benefitsTimer);
+      const w = list.clientWidth || 1;
+      const i = (Math.round(list.scrollLeft / w) + 1) % count;
+      list.scrollTo({ left: w * i, behavior: 'smooth' });
     };
-    list.addEventListener('scroll', sync, { passive: true });
+    const start = () => {
+      clearInterval(benefitsTimer);
+      benefitsTimer = setInterval(next, 7000);
+    };
+    list.addEventListener('touchstart', () => clearInterval(benefitsTimer), { passive: true });
+    list.addEventListener('touchend', () => { clearInterval(benefitsTimer); start(); }, { passive: true });
+    start();
   };
 
   MP.pages.home = () => {

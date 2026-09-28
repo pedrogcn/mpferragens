@@ -47,12 +47,21 @@
 /* ============ Hero / banner ============ */
 .hero { position: relative; background: var(--black); overflow: hidden; }
 .hero-track { position: relative; display: grid; }
-.hero-slide { display: grid; grid-area: 1 / 1; grid-template-columns: minmax(0, 1fr); align-content: center; visibility: hidden; background:
+/* transição entre banners: esmaece + aproxima suavemente (crossfade), o que sai e o que entra ao mesmo tempo */
+.hero-slide { display: grid; grid-area: 1 / 1; grid-template-columns: minmax(0, 1fr); align-content: center;
+  opacity: 0; transform: scale(1.03); pointer-events: none; z-index: 1;
+  transition: opacity 0.8s ease, transform 1.2s ease;
+  background:
   linear-gradient(115deg, rgba(0,0,0,.94) 0%, rgba(0,0,0,.86) 46%, rgba(0,0,0,.35) 100%),
   repeating-linear-gradient(135deg, #1b1b1b 0 22px, #141414 22px 44px);
   color: #fff; position: relative; }
 .hero-slide::after { content: ''; position: absolute; right: 0; top: 0; bottom: 0; width: 42%; background: repeating-linear-gradient(135deg, var(--yellow) 0 14px, #111 14px 28px); opacity: 0.09; clip-path: polygon(24% 0, 100% 0, 100% 100%, 0 100%); pointer-events: none; }
-.hero-slide.is-on { visibility: visible; animation: fade 0.5s; }
+.hero-slide.is-on { opacity: 1; transform: scale(1); pointer-events: auto; z-index: 2; }
+@keyframes heroInMobile { from { opacity: 0; transform: scale(1.03); } }
+@media (prefers-reduced-motion: reduce) {
+  .hero-slide { transition-duration: 0.01ms; transform: none; }
+  .hero-slide.is-on { animation: none; }
+}
 /* arte pronta: inteira (sem cortar) dentro da mesma altura dos outros slides; as sobras são preenchidas com a própria imagem desfocada */
 /* computador: banner de ponta a ponta; a altura acompanha a largura (proporção 1920 x 600), como nos grandes sites de loja */
 .hero-slide.is-fullimg { aspect-ratio: 1920 / 600; align-self: stretch; width: 100%; min-width: 0; min-height: 0; background: var(--black); overflow: hidden; }
@@ -87,9 +96,6 @@
 .benefits li b, .benefits li span { overflow-wrap: break-word; }
 .benefits b { font-weight: 800; font-size: 15px; }
 .benefits span { font-size: 14px; font-weight: 500; }
-.benefits-dots { display: none; justify-content: center; gap: 6px; padding-bottom: 12px; }
-.benefits-dots span { width: 6px; height: 6px; border-radius: 50%; background: rgba(17, 17, 17, 0.28); transition: width 0.15s, border-radius 0.15s; }
-.benefits-dots span.is-on { width: 16px; border-radius: 4px; background: #111; }
 
 /* ============ Categorias ============ */
 .cat-row { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 12px; }
@@ -269,7 +275,6 @@
   .benefits ul::-webkit-scrollbar { display: none; }
   .benefits li { flex: 0 0 100%; justify-content: center; scroll-snap-align: center; text-align: center; padding-inline: 16px; box-sizing: border-box; }
   .benefits li div { align-items: center; }
-  .benefits-dots { display: flex; }
 }
 
 /* preço de atacado */
@@ -281,8 +286,10 @@
 /* banners só com imagem: em telas menores cada banner tem a altura natural da sua imagem (sem faixas nem desfoque) */
 @media (max-width: 860px) {
   .hero-track { display: block; }
-  .hero-slide { display: none; }
-  .hero-slide.is-on { display: grid; }
+  /* no celular cada banner usa a própria altura (display:none tira o item da conta), então a transição
+     de opacidade do computador não funciona aqui — entra com um fade+zoom leve em vez disso */
+  .hero-slide { display: none; opacity: 1; transform: none; }
+  .hero-slide.is-on { display: grid; animation: heroInMobile 0.5s ease; }
   .hero-slide.is-fullimg { min-height: 0; aspect-ratio: auto; }
   .hero-slide.is-fullimg.is-on { display: block; }
   .hero-slide.is-fullimg .fs-bg { display: none; }
