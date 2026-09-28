@@ -31,7 +31,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <!-- o navegador já abre a conexão com o banco de dados (Firestore) em paralelo, antes de o JavaScript rodar -->
   <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- fonte do Google carregada sem travar a primeira exibição da página (troca suave assim que chega) -->
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap"></noscript>
   <link rel="stylesheet" href="css/base.css">
   <link rel="stylesheet" href="css/components.css">
   <link rel="stylesheet" href="css/pages.css">
@@ -39,7 +41,8 @@
 <body>
   <a class="skip-link" href="#app">Ir para o conteúdo</a>
   <div id="header-root"></div>
-  <main id="app" tabindex="-1"></main>
+  <!-- formato da página já visível assim que o CSS chega, antes mesmo do JavaScript carregar (o app substitui isto na hora que estiver pronto) -->
+  <main id="app" tabindex="-1"><div class="sk sk-hero"></div><div class="container section"><div class="sk-row"><div class="sk sk-cat"></div><div class="sk sk-cat"></div><div class="sk sk-cat"></div><div class="sk sk-cat"></div><div class="sk sk-cat"></div><div class="sk sk-cat"></div><div class="sk sk-cat"></div></div><div class="pgrid"><div class="sk-card"><div class="sk sk-img"></div><div class="sk sk-line"></div><div class="sk sk-line short"></div><div class="sk sk-btn"></div></div><div class="sk-card"><div class="sk sk-img"></div><div class="sk sk-line"></div><div class="sk sk-line short"></div><div class="sk sk-btn"></div></div><div class="sk-card"><div class="sk sk-img"></div><div class="sk sk-line"></div><div class="sk sk-line short"></div><div class="sk sk-btn"></div></div><div class="sk-card"><div class="sk sk-img"></div><div class="sk sk-line"></div><div class="sk sk-line short"></div><div class="sk sk-btn"></div></div></div></div></main>
   <div id="footer-root"></div>
   <div id="overlay-root"></div>
   <div id="toast-root" aria-live="polite"></div>
