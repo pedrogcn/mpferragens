@@ -374,7 +374,17 @@
     const cats = MP.seed.mpCategories;
     if (!(await MP.ui.confirm(`Importar ${prods.length} produtos dos folhetos (com os preços) e as categorias “Telhado e Calhas” e “Solda”?`, { ok: 'Importar' }))) return;
     el.disabled = true;
-    const okAll = cats.concat(prods).every((x) => (x.category ? MP.data.products : MP.data.categories).save(Object.assign({}, x)));
+    // se este produto já existir (reimportação, por engano ou para atualizar preços), preserva a foto
+    // já cadastrada: os dados do folheto (seed) nunca trazem foto de verdade, então nunca podem apagar
+    // uma foto que o lojista já enviou pelo painel.
+    const existingIds = prods.map((p) => p.id).filter((id) => MP.data.products.get(id));
+    if (MP.cloud.enabled && existingIds.length) await MP.cloud.fetchImages(existingIds);
+    const currentImages = (id) => (MP.cloud.enabled ? MP.cloud.imagesFor(id) : (MP.data.products.get(id) || {}).images);
+    const okAll = cats.concat(prods).every((x) => {
+      if (!x.category) return MP.data.categories.save(Object.assign({}, x));
+      const keep = currentImages(x.id);
+      return MP.data.products.save(Object.assign({}, x, keep && keep.length ? { images: keep } : {}));
+    });
     if (!okAll) {
       el.disabled = false;
       return MP.ui.toast('Não foi possível salvar todos os produtos. Tente de novo.', 'error');
