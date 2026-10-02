@@ -28,7 +28,7 @@
   MP.on.submit('ship-calc', (form, fd) => {
     const p = MP.catalog.byId(form.dataset.id);
     const out = form.parentElement.querySelector('.ship-result');
-    const q = MP.shipping.quote(fd.get('cep'), p.price);
+    const q = MP.shipping.quote(fd.get('cep'), p.price, p.type === 'Telhas');
     if (!q.ok) {
       out.innerHTML = `<span class="text-err">${esc(q.msg)}</span>`;
       return;

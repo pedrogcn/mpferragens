@@ -29,17 +29,19 @@
 
   /* ---------- frete ---------- */
   MP.shipping = {
-    quote(cep, subtotal) {
+    /* hasTelha: true se o carrinho/produto tem telha — aí o limite de frete grátis é o maior (freeAboveTelha) */
+    quote(cep, subtotal, hasTelha) {
       const d = U.digits(cep);
       if (d.length !== 8) return { ok: false, msg: 'Informe um CEP válido com 8 dígitos.' };
       const n = Number(d.slice(0, 5));
       const s = MP.settings.get().shipping;
+      const limit = Number(hasTelha ? s.freeAboveTelha : s.freeAbove);
+      const free = limit > 0 && subtotal >= limit;
       if (n >= 69000 && n <= 69099) {
-        const free = subtotal >= Number(s.manausFreeAbove);
-        return { ok: true, zone: 'Manaus', cost: free ? 0 : Number(s.manausPrice), free, days: s.manausDays, freeAbove: Number(s.manausFreeAbove) };
+        return { ok: true, zone: 'Manaus', cost: free ? 0 : Number(s.manausPrice), free, days: s.manausDays, freeAbove: limit };
       }
       if ((n >= 69100 && n <= 69299) || (n >= 69400 && n <= 69899)) {
-        return { ok: true, zone: 'Interior do Amazonas', cost: Number(s.interiorPrice), free: false, days: s.interiorDays };
+        return { ok: true, zone: 'Interior do Amazonas', cost: free ? 0 : Number(s.interiorPrice), free, days: s.interiorDays, freeAbove: limit };
       }
       return { ok: true, zone: 'Outras regiões', cost: null, consult: true, msg: 'Para este CEP o frete é combinado pelo WhatsApp.' };
     }
@@ -140,7 +142,7 @@
       let ship;
       if (s.mode === 'retirada') ship = { mode: 'retirada', cost: 0, label: 'Retirada na loja', days: 'Sem custo' };
       else {
-        const q = MP.shipping.quote(s.cep, subtotal - discount);
+        const q = MP.shipping.quote(s.cep, subtotal - discount, lines.some((l) => l.product.type === 'Telhas'));
         ship = q.ok ? Object.assign({ mode: 'entrega', label: q.zone }, q) : { mode: 'entrega', cost: null, pending: true };
       }
       const total = U.round2(subtotal - discount + (ship.cost || 0));

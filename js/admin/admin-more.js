@@ -172,8 +172,9 @@
         <h2>Redes sociais</h2>
         <div class="grid-2">${f('@ do Instagram', 'handle', s.handle)}${f('Instagram (link)', 'social.instagram', s.social.instagram)}${f('Facebook (link)', 'social.facebook', s.social.facebook)}${f('TikTok (link)', 'social.tiktok', s.social.tiktok)}${f('YouTube (link)', 'social.youtube', s.social.youtube)}</div>
         <h2>Frete</h2>
-        <div class="grid-3">${f('Manaus: valor (R$)', 'shipping.manausPrice', s.shipping.manausPrice, { type: 'number', attrs: 'step="0.01" min="0"' })}${f('Manaus: frete grátis acima de (R$)', 'shipping.manausFreeAbove', s.shipping.manausFreeAbove, { type: 'number', attrs: 'step="0.01" min="0"' })}${f('Manaus: prazo', 'shipping.manausDays', s.shipping.manausDays)}
-        ${f('Interior do AM: valor (R$)', 'shipping.interiorPrice', s.shipping.interiorPrice, { type: 'number', attrs: 'step="0.01" min="0"' })}${f('Interior do AM: prazo', 'shipping.interiorDays', s.shipping.interiorDays)}${f('Texto da retirada na loja', 'pickupText', s.pickupText)}</div>
+        <div class="grid-3">${f('Manaus: valor (R$)', 'shipping.manausPrice', s.shipping.manausPrice, { type: 'number', attrs: 'step="0.01" min="0"' })}${f('Manaus: prazo', 'shipping.manausDays', s.shipping.manausDays)}${f('Interior do AM: valor (R$)', 'shipping.interiorPrice', s.shipping.interiorPrice, { type: 'number', attrs: 'step="0.01" min="0"' })}
+        ${f('Interior do AM: prazo', 'shipping.interiorDays', s.shipping.interiorDays)}${f('Texto da retirada na loja', 'pickupText', s.pickupText)}</div>
+        <div class="grid-2">${f('Frete grátis acima de (R$)', 'shipping.freeAbove', s.shipping.freeAbove, { type: 'number', attrs: 'step="0.01" min="0"', hint: 'Vale para Manaus e Interior, exceto quando o pedido tem telha.' })}${f('Com telha no pedido, frete grátis acima de (R$)', 'shipping.freeAboveTelha', s.shipping.freeAboveTelha, { type: 'number', attrs: 'step="0.01" min="0"' })}</div>
         <p class="muted small">Outras regiões aparecem como “frete a combinar pelo WhatsApp”.</p>
         <h2>Segurança do painel</h2>
         ${MP.cloud.enabled ? '<p class="muted small">O acesso ao painel é feito com o e-mail e a senha da sua conta. Para trocar a senha, use “Meus dados” na área do cliente ou o link “Esqueci minha senha”.</p>' : `<div class="grid-2">${f('Nova senha do painel (deixe vazio para manter)', 'newAdminPassword', '', { type: 'password', autocomplete: 'new-password' })}</div>`}
@@ -202,7 +203,7 @@
     C.clearErrors(form);
     const patch = {};
     ['storeName', 'tagline', 'whatsappDisplay', 'phone', 'email', 'handle', 'pickupText', 'address.street', 'address.cep', 'address.district', 'address.city', 'address.state', 'social.instagram', 'social.facebook', 'social.tiktok', 'social.youtube', 'shipping.manausDays', 'shipping.interiorDays'].forEach((k) => setPath(patch, k, String(fd.get(k) || '').trim()));
-    ['shipping.manausPrice', 'shipping.manausFreeAbove', 'shipping.interiorPrice'].forEach((k) => setPath(patch, k, Number(String(fd.get(k) || '0').replace(',', '.')) || 0));
+    ['shipping.manausPrice', 'shipping.interiorPrice', 'shipping.freeAbove', 'shipping.freeAboveTelha'].forEach((k) => setPath(patch, k, Number(String(fd.get(k) || '0').replace(',', '.')) || 0));
     if (!patch.storeName) return C.formError(form, 'storeName', 'Informe o nome da loja.');
     const wa = U.digits(fd.get('whatsapp'));
     if (wa.length < 12 || wa.length > 13) return C.formError(form, 'whatsapp', 'Use o formato 55 + DDD + número (12 ou 13 dígitos).');

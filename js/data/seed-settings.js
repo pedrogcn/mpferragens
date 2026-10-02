@@ -19,7 +19,8 @@
       youtube: ''
     },
     handle: '@mpferragens',
-    shipping: { manausPrice: 29.9, manausFreeAbove: 500, manausDays: '1 a 2 dias úteis', interiorPrice: 89.9, interiorDays: '5 a 10 dias úteis' },
+    // freeAbove/freeAboveTelha valem para as duas zonas (Manaus e Interior); com telha no carrinho, o limite é o maior (freeAboveTelha)
+    shipping: { manausPrice: 29.9, interiorPrice: 89.9, freeAbove: 1300, freeAboveTelha: 3000, manausDays: '1 a 2 dias úteis', interiorDays: '5 a 10 dias úteis' },
     pickupText: 'Retire na loja em até 2 horas após a confirmação do pedido.',
     /* senha padrão do painel: admin123 (troque em Loja > Segurança) */
     adminPasswordHash: MP.util.sha256('admin123:mp-admin')
