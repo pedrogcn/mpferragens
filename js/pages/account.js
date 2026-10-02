@@ -75,7 +75,7 @@
       <table class="cart-table order-items"><thead><tr><th>Produto</th><th>Preço</th><th>Qtd.</th><th>Valor</th></tr></thead><tbody>${o.items
         .map((i) => {
           const p = MP.catalog.byId(i.productId);
-          return `<tr><td data-label="Produto">${p ? `<a class="cart-prod" href="#/produto/${esc(p.slug)}"><img src="${esc(MP.art.main(p))}" alt=""><span><b>${esc(i.name)}</b><small>${esc(i.variant || '')}${i.unitLabel ? ' · ' + esc(i.unitLabel) : ''}</small></span></a>` : `<b>${esc(i.name)}</b> <small>${esc(i.variant || '')}</small>`}</td><td data-label="Preço">${brl(i.price)}</td><td data-label="Qtd.">${i.qty}</td><td data-label="Valor"><b>${brl(U.round2(i.price * i.qty))}</b></td></tr>`;
+          return `<tr><td data-label="Produto">${p ? `<a class="cart-prod" href="#/produto/${esc(p.slug)}" data-id="${p.id}"><img src="${esc(MP.art.main(p))}" alt="" loading="lazy"><span><b>${esc(i.name)}</b><small>${esc(i.variant || '')}${i.unitLabel ? ' · ' + esc(i.unitLabel) : ''}</small></span></a>` : `<b>${esc(i.name)}</b> <small>${esc(i.variant || '')}</small>`}</td><td data-label="Preço">${brl(i.price)}</td><td data-label="Qtd.">${i.qty}</td><td data-label="Valor"><b>${brl(U.round2(i.price * i.qty))}</b></td></tr>`;
         })
         .join('')}</tbody></table>
       <div class="order-foot">
@@ -89,6 +89,17 @@
         <button class="btn btn-ghost" data-action="quote-print">${MP.icon('printer', 16)} Imprimir</button>
         ${o.status === 'Aguardando' || o.status === 'Em separação' ? `<button class="btn btn-ghost link-danger" data-action="order-cancel" data-id="${esc(o.id)}">Cancelar pedido</button>` : ''}
       </div></div>`;
+  };
+  /* busca as fotos dos produtos deste pedido (as fichas já tinham vindo; só a foto fica à parte) */
+  const mountOrder = (o) => (app) => {
+    if (!MP.cloud.enabled) return;
+    MP.cloud.fetchImages(o.items.map((i) => i.productId)).then(() => {
+      U.$$('.cart-prod[data-id]', app).forEach((a) => {
+        const p = MP.catalog.byId(a.dataset.id);
+        const img = a.querySelector('img');
+        if (p && img) img.src = MP.art.main(p);
+      });
+    });
   };
 
   MP.on.click('order-reorder', (el) => {
@@ -124,7 +135,7 @@
     if (!u) return { redirected: true };
     const o = MP.data.orders.get(ctx.params.id);
     if (!o || o.userId !== u.id) return MP.pages.notFound();
-    return layout(u, 'pedidos', `Pedido #${o.id}`, `<p><a class="link-ic" href="#/conta/pedidos">${MP.icon('arrowl', 16)} Voltar para meus pedidos</a></p>${orderBody(o)}`);
+    return Object.assign(layout(u, 'pedidos', `Pedido #${o.id}`, `<p><a class="link-ic" href="#/conta/pedidos">${MP.icon('arrowl', 16)} Voltar para meus pedidos</a></p>${orderBody(o)}`), { mount: mountOrder(o) });
   };
 
   /* confirmação / consulta pública (visitante ou dono do pedido) */
@@ -140,7 +151,8 @@
         ${sent != null ? `<div class="success-box">${MP.icon('check', 28)}<div><h1>Orçamento enviado!</h1><p>${sent === '1' ? 'Abrimos o WhatsApp da loja com o seu orçamento. Basta enviar a mensagem para falar com nosso atendimento.' : 'Não conseguimos abrir o WhatsApp automaticamente. Use o botão abaixo para enviar o orçamento.'}</p>
           ${url ? `<a class="btn btn-wa" href="${esc(url)}" target="_blank" rel="noopener">${MP.icon('whatsapp', 18)} ${sent === '1' ? 'Abrir o WhatsApp novamente' : 'Enviar pelo WhatsApp'}</a>` : ''}</div></div>` : ''}
         ${orderBody(o)}
-        <p class="center mt"><a class="btn btn-outline" href="#/">Continuar comprando</a> ${u ? '<a class="btn btn-ghost" href="#/conta/pedidos">Meus pedidos</a>' : ''}</p></div>`
+        <p class="center mt"><a class="btn btn-outline" href="#/">Continuar comprando</a> ${u ? '<a class="btn btn-ghost" href="#/conta/pedidos">Meus pedidos</a>' : ''}</p></div>`,
+      mount: mountOrder(o)
     };
   };
 

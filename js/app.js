@@ -39,6 +39,37 @@
   R.add('/pedido/:id', (c) => MP.pages.orderPublic(c));
   R.add('/contato', () => MP.pages.contact());
   R.add('/institucional/:page', (c) => MP.pages.institutional(c));
+  /*
+   * Painel administrativo: carregado sob demanda, só quando alguém visita /admin — ~50 KB de
+   * JavaScript (admin.js + admin-more.js) que a imensa maioria das visitas (clientes comprando)
+   * nunca usa. MP.admin.isLogged/login/logout continuam em core/auth.js (sempre carregado), então
+   * isso não muda nada do login nem dos avisos de pedido novo (admin/alerts.js).
+   */
+  const loadScriptTag = (src) =>
+    new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = src;
+      s.onload = res;
+      s.onerror = () => rej(new Error('Não foi possível carregar ' + src));
+      document.head.appendChild(s);
+    });
+  let adminLoad = null;
+  const loadAdmin = () => {
+    // em ordem: admin-more.js lê o que admin.js monta em MP.admin, então precisa rodar depois dele
+    if (!adminLoad) adminLoad = loadScriptTag('js/admin/admin.js').then(() => loadScriptTag('js/admin/admin-more.js')).then(() => R.render(false));
+    return adminLoad;
+  };
+  MP.admin = MP.admin || {};
+  if (!MP.admin.handler) {
+    MP.admin.handler = () => {
+      loadAdmin().catch((e) => {
+        console.error(e);
+        adminLoad = null; // permite tentar de novo
+        U.$('#app').innerHTML = `<div class="container page-pad narrow" style="text-align:center"><h1>Não foi possível abrir o painel</h1><p class="muted">Verifique sua conexão e tente de novo.</p><p><button class="btn btn-primary" onclick="location.reload()">Tentar novamente</button></p></div>`;
+      });
+      return { title: 'Admin', layout: 'admin', html: '<div class="container page-pad" style="text-align:center;padding:80px 16px"><p class="muted">Carregando painel administrativo…</p></div>' };
+    };
+  }
   R.add('/admin', (c) => MP.admin.handler(c));
   R.add('/admin/:section', (c) => MP.admin.handler(c));
 

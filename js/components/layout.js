@@ -96,10 +96,20 @@
     }
     const res = MP.catalog.search(q, MP.catalog.products()).slice(0, 6);
     box.innerHTML = res.length
-      ? res.map((p) => `<a href="#/produto/${esc(p.slug)}"><img src="${esc(MP.art.main(p))}" alt=""><span>${esc(p.name)} <em>${esc(p.variant)}</em></span><b>${U.brl(p.price)}</b></a>`).join('') +
+      ? res.map((p) => `<a href="#/produto/${esc(p.slug)}" data-id="${p.id}"><img src="${esc(MP.art.main(p))}" alt="" loading="lazy"><span>${esc(p.name)} <em>${esc(p.variant)}</em></span><b>${U.brl(p.price)}</b></a>`).join('') +
         `<a class="suggest-all" href="#/busca?q=${encodeURIComponent(q)}">Ver todos os resultados para “${esc(q)}”</a>`
       : `<div class="suggest-empty">Nenhum produto encontrado para “${esc(q)}”.</div>`;
     box.hidden = false;
+    // as fichas já estavam em memória; busca só a foto dos até 6 produtos sugeridos aqui
+    if (res.length && MP.cloud.enabled) {
+      MP.cloud.fetchImages(res.map((p) => p.id)).then(() => {
+        box.querySelectorAll('a[data-id]').forEach((a) => {
+          const p = MP.catalog.byId(a.dataset.id);
+          const img = a.querySelector('img');
+          if (p && img) img.src = MP.art.main(p);
+        });
+      });
+    }
   });
 
   /* ---------- faixa final + rodapé ---------- */

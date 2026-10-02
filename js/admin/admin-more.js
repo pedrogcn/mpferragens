@@ -235,13 +235,13 @@
     el.disabled = false;
   });
   MP.on.click('admin-optimize', async (el) => {
-    if (!(await MP.ui.confirm('Reduzir o tamanho das fotos de produtos e categorias? Elas ficam com no máximo 600 px (produtos) e 320 px (categorias), sem perder a nitidez na loja.', { ok: 'Otimizar' }))) return;
+    if (!(await MP.ui.confirm('Reduzir o tamanho das fotos de produtos, categorias e banners? Ficam com no máximo 600 px (produtos), 320 px (categorias) e 1920/800 px (banners, computador/celular), sem perder a nitidez na loja.', { ok: 'Otimizar' }))) return;
     el.disabled = true;
     let items = 0;
     let before = 0;
     let after = 0;
-    const shrink = async (src, dim) => {
-      const out = await U.shrinkDataUrl(src, dim, 0.72);
+    const shrink = async (src, dim, quality = 0.72) => {
+      const out = await U.shrinkDataUrl(src, dim, quality);
       before += String(src).length;
       after += out.length;
       return out;
@@ -265,6 +265,22 @@
       const out = await shrink(c.image, 320);
       if (out !== c.image) {
         MP.data.categories.save(Object.assign({}, c, { image: out }));
+        items++;
+      }
+    }
+    // banners: qualidade mais alta (0.9) que fotos de produto, para manter o design nítido
+    for (const b of MP.data.banners.all()) {
+      const patch = {};
+      if (b.image) {
+        const out = await shrink(b.image, 1920, 0.9);
+        if (out !== b.image) patch.image = out;
+      }
+      if (b.imageMobile) {
+        const out = await shrink(b.imageMobile, 800, 0.9);
+        if (out !== b.imageMobile) patch.imageMobile = out;
+      }
+      if (Object.keys(patch).length) {
+        MP.data.banners.save(Object.assign({}, b, patch));
         items++;
       }
     }

@@ -191,6 +191,34 @@ MP.pages = MP.pages || {};
     return c.toDataURL(file.type === 'image/png' ? 'image/webp' : 'image/jpeg', quality);
   };
 
+  /*
+   * Banners: comprime pra WebP (sempre, não importa o formato enviado) numa qualidade alta — o design
+   * continua nítido, mas o arquivo cai bastante de tamanho — e limita ao tamanho de verdade usado no
+   * site (1920 px no computador, 800 px no celular), mesmo que o envio seja "raw" (sem recorte extra).
+   * Volta ao arquivo original se, por algum motivo, o resultado não ficar menor.
+   */
+  U.resizeBanner = async (file, maxDim = 1920, quality = 0.92) => {
+    const src = await U.readFile(file);
+    if (/svg/.test(file.type)) return src;
+    try {
+      const img = await new Promise((res, rej) => {
+        const i = new Image();
+        i.onload = () => res(i);
+        i.onerror = rej;
+        i.src = src;
+      });
+      const k = Math.min(1, maxDim / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.max(1, Math.round(img.width * k));
+      c.height = Math.max(1, Math.round(img.height * k));
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      const out = c.toDataURL('image/webp', quality);
+      return out.startsWith('data:image/webp') && out.length < src.length ? out : src;
+    } catch (e) {
+      return src;
+    }
+  };
+
   /* Reduz uma foto já salva (data:URL). Devolve a original se não der para reduzir ou se não compensar. */
   U.shrinkDataUrl = async (src, maxDim = 600, quality = 0.72) => {
     if (!/^data:image\/(png|jpe?g|webp);base64,/.test(String(src))) return src;

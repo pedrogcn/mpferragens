@@ -79,7 +79,7 @@
       <div class="img-previews">${previews(vals)}</div>
       <input type="hidden" name="${esc(name)}" value="${esc(JSON.stringify(vals))}">
       <label class="btn btn-outline btn-sm file-btn">${MP.icon('upload', 16)} Enviar ${multiple ? 'fotos' : 'imagem'}<input type="file" accept="image/*" ${multiple ? 'multiple' : ''} data-change="admin-img-add" hidden></label>
-      <small class="hint">${raw ? `A imagem é usada exatamente como enviada (sem recompressão, máx. ${maxKB ? maxKB + ' KB' : MP.cloud.enabled ? '500 KB' : '1,5 MB'}).` : `As fotos são reduzidas para no máx. ${dim || (MP.cloud.enabled ? 600 : 900)} px para o site abrir rápido.`}</small></div>`;
+      <small class="hint">${raw ? `A imagem é compactada (sem perder nitidez) para no máx. ${dim || 1920} px de largura, até ${maxKB ? maxKB + ' KB' : MP.cloud.enabled ? '500 KB' : '1,5 MB'}.` : `As fotos são reduzidas para no máx. ${dim || (MP.cloud.enabled ? 600 : 900)} px para o site abrir rápido.`}</small></div>`;
   };
   const previews = (vals) => vals.map((src, i) => `<div class="img-prev"><img src="${esc(src)}" alt=""><button type="button" data-action="admin-img-del" data-i="${i}" aria-label="Remover imagem">${MP.icon('x', 12)}</button></div>`).join('');
   const readImgs = (wrap) => JSON.parse(wrap.querySelector('input[type=hidden]').value || '[]');
@@ -95,13 +95,20 @@
     for (const f of Array.from(el.files)) {
       if (!/^image\//.test(f.type)) continue;
       const maxKB = Number(wrap.dataset.max) || 0;
-      const rawMax = maxKB ? maxKB * 1024 : MP.cloud.enabled ? 500 * 1024 : 1.5 * 1024 * 1024;
-      if (raw && f.size > rawMax) {
-        MP.ui.toast(`Imagem muito grande (máx. ${maxKB ? maxKB + ' KB' : MP.cloud.enabled ? '500 KB' : '1,5 MB'}).`, 'error');
-        continue;
-      }
+      const capBytes = maxKB ? maxKB * 1024 : MP.cloud.enabled ? 500 * 1024 : 1.5 * 1024 * 1024;
       try {
-        vals.push(raw ? await U.readFile(f) : MP.cloud.enabled ? await U.resizeImage(f, Number(wrap.dataset.dim) || 600, 0.72) : await U.resizeImage(f, Number(wrap.dataset.dim) || 900));
+        const out = raw
+          ? await U.resizeBanner(f, Number(wrap.dataset.dim) || 1920)
+          : MP.cloud.enabled
+            ? await U.resizeImage(f, Number(wrap.dataset.dim) || 600, 0.72)
+            : await U.resizeImage(f, Number(wrap.dataset.dim) || 900);
+        // só o banner (raw) tem limite de tamanho final: o resultado já vem compactado, mas uma imagem
+        // enorme/muito detalhada ainda pode passar do limite — aí é melhor avisar do que travar o site
+        if (raw && out.length > capBytes) {
+          MP.ui.toast(`Imagem muito grande mesmo depois de compactada (máx. ${maxKB ? maxKB + ' KB' : MP.cloud.enabled ? '500 KB' : '1,5 MB'}). Tente uma imagem mais simples ou menor.`, 'error');
+          continue;
+        }
+        vals.push(out);
       } catch (e) {
         MP.ui.toast('Não foi possível ler a imagem.', 'error');
       }
@@ -209,7 +216,7 @@
   };
   const addBtn = (key, label) => `<button class="btn btn-primary" data-action="admin-new" data-res="${key}">${MP.icon('plus', 16)} ${label}</button>`;
   const chip = (on, yes = 'Ativo', no = 'Inativo') => `<span class="status ${on ? 'status-done' : 'status-cancel'}">${on ? yes : no}</span>`;
-  const thumb = (src) => `<img class="thumb-sm" src="${esc(src)}" alt="">`;
+  const thumb = (src) => `<img class="thumb-sm" src="${esc(src)}" alt="" loading="lazy">`;
 
   /* ---------- produtos ---------- */
   const catOptions = () => MP.catalog.categories().map((c) => [c.slug, c.name]);
@@ -331,8 +338,8 @@
       { name: 'link', label: 'Link do botão', help: 'Ex.: #/categoria/eletrica' },
       { name: 'hero', label: 'Ilustração padrão', type: 'select', options: () => [['steel', 'Aço e metais'], ['eletro', 'Elétrica e hidráulica'], ['tools', 'Ferramentas']] },
       { name: 'order', label: 'Ordem (0 = primeiro)', type: 'number', attrs: 'step="1" min="0"' },
-      { name: 'image', label: 'Imagem do banner no computador (ideal: 1920 × 600 px)', type: 'image', raw: true, max: MP.cloud.enabled ? 350 : 0, full: true },
-      { name: 'imageMobile', label: 'Imagem do banner no celular (opcional, ideal: 800 × 500 px)', type: 'image', raw: true, max: MP.cloud.enabled ? 350 : 0, full: true },
+      { name: 'image', label: 'Imagem do banner no computador (ideal: 1920 × 600 px)', type: 'image', raw: true, dim: 1920, max: MP.cloud.enabled ? 350 : 0, full: true },
+      { name: 'imageMobile', label: 'Imagem do banner no celular (opcional, ideal: 800 × 500 px)', type: 'image', raw: true, dim: 800, max: MP.cloud.enabled ? 350 : 0, full: true },
       { name: 'full', label: 'Banner só com imagem (arte pronta: não mostra título, texto e botão do site)', type: 'checkbox' },
       { name: 'active', label: 'Banner ativo', type: 'checkbox' }
     ],

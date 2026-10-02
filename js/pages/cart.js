@@ -180,7 +180,7 @@
     const rows = t.lines
       .map(
         (l) => `<tr data-key="${esc(l.key)}">
-        <td data-label="Produto"><a class="cart-prod" href="#/produto/${esc(l.product.slug)}"><img src="${esc(MP.art.main(l.product))}" alt=""><span><b>${esc(l.product.name)}</b><small>${esc(l.product.variant)}${l.product.units ? ' · ' + esc(l.unitLabel) : ''}</small></span></a></td>
+        <td data-label="Produto"><a class="cart-prod" href="#/produto/${esc(l.product.slug)}" data-id="${l.product.id}"><img src="${esc(MP.art.main(l.product))}" alt="" loading="lazy"><span><b>${esc(l.product.name)}</b><small>${esc(l.product.variant)}${l.product.units ? ' · ' + esc(l.unitLabel) : ''}</small></span></a></td>
         <td data-label="Preço">${brl(l.price)}${l.wholesale ? '<small class="wholesale-on">Preço de atacado</small>' : ''}</td>
         <td data-label="Quantidade">${C.stepper({ value: l.qty, attrs: 'data-change="cart-qty"', label: 'Quantidade de ' + l.product.name })}</td>
         <td data-label="Valor"><b>${brl(l.total)}</b></td>
@@ -236,6 +236,19 @@
         <p class="ps-note">Orçamento sujeito à confirmação de disponibilidade, prazo e forma de pagamento. Validade: 3 dias.</p>
       </div>
     </div>`;
-    return { title: 'Seu orçamento', html };
+    return {
+      title: 'Seu orçamento',
+      html,
+      mount: (app) => {
+        if (!MP.cloud.enabled) return;
+        MP.cloud.fetchImages(t.lines.map((l) => l.product.id)).then(() => {
+          U.$$('.cart-prod[data-id]', app).forEach((a) => {
+            const p = MP.catalog.byId(a.dataset.id);
+            const img = a.querySelector('img');
+            if (p && img) img.src = MP.art.main(p);
+          });
+        });
+      }
+    };
   };
 })(window.MP);
