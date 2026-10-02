@@ -32,8 +32,36 @@
   <!-- o navegador já abre a conexão com o banco de dados (Firestore) em paralelo, antes de o JavaScript rodar -->
   <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
   <!-- fonte do Google carregada sem travar a primeira exibição da página (troca suave assim que chega) -->
-  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
-  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap"></noscript>
+  <!-- pesos conferidos contra o CSS de verdade: Barlow Condensed só usa 700/800 (600 nunca é usado, tirei);
+       Inter precisava do 800 (faltava — textos em negrito forte ficavam "fingindo" negrito sem a fonte certa) -->
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800&family=Inter:wght@400;500;600;700;800&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800&family=Inter:wght@400;500;600;700;800&display=swap"></noscript>
+  <!--
+    CSS crítico: só o necessário pra desenhar o esqueleto (acima) na hora, sem esperar os arquivos
+    externos chegarem. É uma cópia de regras que já existem em css/base.css e css/components.css —
+    se mudar o visual do esqueleto nesses arquivos, repita a mudança aqui também.
+  -->
+  <style>
+    :root{--black:#0d0d0d;--ink:#1b1b1b;--muted:#6b6b6b;--yellow:#ffc20e;--bg:#fff;--line:#e4e4e4;--radius:8px;--radius-lg:12px;--font-head:'Barlow Condensed','Arial Narrow','Roboto Condensed',Arial,sans-serif;--font:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;--container:1240px}
+    *,*::before,*::after{box-sizing:border-box}
+    body{margin:0;font-family:var(--font);font-size:15px;line-height:1.5;color:var(--ink);background:var(--bg);-webkit-font-smoothing:antialiased}
+    .container{width:100%;max-width:var(--container);margin-inline:auto;padding-inline:16px}
+    .section{padding-block:28px}
+    .sk{background:linear-gradient(90deg,#ececec 25%,#f6f6f6 37%,#ececec 63%);background-size:400% 100%;animation:shimmer 1.3s infinite;border-radius:var(--radius)}
+    @keyframes shimmer{0%{background-position:100% 0}100%{background-position:0 0}}
+    .sk-hero{height:340px;border-radius:0}
+    .sk-row{display:grid;grid-template-columns:repeat(7,1fr);gap:12px;margin-bottom:30px}
+    .sk-cat{height:120px}
+    .sk-card{border:1px solid var(--line);border-radius:var(--radius-lg);padding:12px;display:grid;gap:10px}
+    .sk-img{aspect-ratio:1}
+    .sk-line{height:14px}
+    .sk-line.short{width:60%}
+    .sk-btn{height:38px}
+    .pgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+    @media (max-width:860px){.pgrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}}
+    @media (max-width:720px){.sk-row{grid-template-columns:repeat(3,1fr)}}
+    @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
+  </style>
   <link rel="stylesheet" href="css/base.css">
   <link rel="stylesheet" href="css/components.css">
   <link rel="stylesheet" href="css/pages.css">
