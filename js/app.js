@@ -112,7 +112,15 @@
     // esqueleto da home (em vez de "Carregando…"): a pessoa vê o formato do site na hora,
     // enquanto os dados de verdade ainda estão chegando do servidor.
     U.$('#app').innerHTML = MP.pages.skeleton ? MP.pages.skeleton('home') : '<p class="boot-msg" style="padding:80px 16px;text-align:center">Carregando…</p>';
-    MP.cloud.boot().then(start, (e) => {
+    /*
+     * O catálogo (cloud.boot) não espera o login terminar de carregar — só quem abre direto numa
+     * página que depende de saber se está logado (painel, área da conta, link de um pedido) espera
+     * os dois, pra não mostrar/redirecionar errado antes do login ser confirmado. Clicar para essas
+     * páginas depois que o site já está no ar não precisa disso: a essa altura o login já resolveu.
+     */
+    const needsAuthFirst = /^#\/(admin|conta(\/|$)|pedido\/)/.test(location.hash);
+    const ready = needsAuthFirst ? Promise.all([MP.cloud.boot(), MP.cloud.whenAuthKnown()]) : MP.cloud.boot();
+    ready.then(start, (e) => {
       console.error(e);
       const perm = e && e.code === 'permission-denied';
       U.$('#app').innerHTML = `<div class="container page-pad narrow" style="text-align:center"><h1>Não foi possível conectar</h1>

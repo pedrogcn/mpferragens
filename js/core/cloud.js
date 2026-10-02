@@ -76,10 +76,14 @@
    * outros). Antes disso, o celular baixava primeiro ~20 arquivos do site para só then começar a baixar
    * o Firebase; agora as duas coisas acontecem ao mesmo tempo, o que evita uma etapa inteira de espera
    * extra no celular (isso sozinho pode significar segundos a menos até o catálogo aparecer).
+   *
+   * auth-compat.js (~140 KB) baixa junto, em paralelo, mas o boot() só espera firestoreReady pra liberar
+   * o catálogo — login é algo que só interessa a quem for entrar na conta, não deveria segurar a loja
+   * inteira. Quem é só visitante nunca percebe o login "terminando" alguns instantes depois.
    */
-  const sdkReady = enabled
-    ? loadScript(SDK + 'firebase-app-compat.js').then(() => Promise.all([loadScript(SDK + 'firebase-auth-compat.js'), loadScript(SDK + 'firebase-firestore-compat.js')]))
-    : Promise.resolve();
+  const appReady = enabled ? loadScript(SDK + 'firebase-app-compat.js') : Promise.resolve();
+  const authReady = enabled ? appReady.then(() => loadScript(SDK + 'firebase-auth-compat.js')) : Promise.resolve();
+  const firestoreReady = enabled ? appReady.then(() => loadScript(SDK + 'firebase-firestore-compat.js')) : Promise.resolve();
 
   const docs = (snap) => snap.docs.map((d) => Object.assign({ id: d.id }, d.data()));
 
@@ -363,14 +367,44 @@
 
   cloud.profile = () => (state.user ? cloud.mem.users.find((u) => u.id === state.user.uid) || null : null);
 
+  // fb.initializeApp roda uma única vez, assim que o pedacinho "app" do SDK chega (o menor dos 3 arquivos)
+  const initApp = enabled
+    ? appReady.then(() => {
+        fb = window.firebase;
+        fb.initializeApp(cfg);
+      })
+    : Promise.resolve();
+
+  /*
+   * Login fica separado do catálogo de propósito: a imensa maioria de quem visita o site é cliente
+   * comprando, não alguém entrando na conta — então o catálogo não precisa esperar o pedacinho de
+   * login (~140 KB) terminar de chegar. Quem realmente for entrar/ver pedidos usa cloud.whenAuthKnown()
+   * (veja js/app.js) pra só decidir o que mostrar depois que o login estiver mesmo resolvido.
+   */
+  const authResolved = (async () => {
+    if (!enabled) return;
+    await Promise.all([initApp, authReady]);
+    auth = fb.auth();
+    await new Promise((resolve, reject) => {
+      let first = true;
+      auth.onAuthStateChanged((user) => {
+        const p = activate(user);
+        if (first) {
+          first = false;
+          p.then(resolve, reject);
+        }
+      });
+    });
+  })();
+  const authTimeout = new Promise((_, rej) => setTimeout(() => rej(new Error('Tempo esgotado ao verificar o login.')), 15000));
+  const authRace = Promise.race([authResolved, authTimeout]);
+  authRace.catch(() => {}); // o erro é tratado por quem chamar whenAuthKnown(); isso só evita "unhandled rejection" se ninguém chamar
+  cloud.whenAuthKnown = () => authRace;
+
   /* ---------- inicialização (chamada por app.js antes de desenhar o site) ---------- */
   cloud.boot = () => {
     const run = async () => {
-      // o download já foi iniciado lá em cima (sdkReady), assim que este arquivo carregou; aqui só esperamos terminar
-      await sdkReady;
-      fb = window.firebase;
-      fb.initializeApp(cfg);
-      auth = fb.auth();
+      await Promise.all([initApp, firestoreReady]);
       db = fb.firestore();
       cloud.db = db;
       // cache no aparelho (IndexedDB): nas visitas seguintes o catálogo aparece na hora, sem baixar tudo de novo
@@ -395,18 +429,6 @@
           cloud.settings = next;
           if (state.booted) MP.bus.emit('settings');
           if (changed) MP.bus.emit('cloud:update', 'settings');
-        })
-      );
-      jobs.push(
-        new Promise((resolve, reject) => {
-          let first = true;
-          auth.onAuthStateChanged((user) => {
-            const p = activate(user);
-            if (first) {
-              first = false;
-              p.then(resolve, reject);
-            }
-          });
         })
       );
       await Promise.all(jobs);
