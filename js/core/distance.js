@@ -12,6 +12,12 @@
  */
 (function (MP) {
   const U = MP.util;
+  /*
+   * A OpenRouteService avisou (out/2026) que vai aposentar este endereço em favor de api.heigit.org —
+   * mas até agora (testado com a chave real) o endereço novo devolve "404" nos mesmos caminhos, então
+   * fica assim por enquanto (continua funcionando). Se um dia o frete por distância parar de funcionar,
+   * é o primeiro lugar a checar: veja o anúncio deles em openrouteservice.org pelo endereço certo novo.
+   */
   const ORS = 'https://api.openrouteservice.org';
   const key = () => window.MP_ORS_KEY || '';
   const CACHE_KEY = 'shipDistCache';

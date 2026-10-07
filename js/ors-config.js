@@ -10,4 +10,4 @@
  *   2. No Dashboard, clique em "Request a token" (ou "Create token").
  *   3. Copie a chave gerada e cole abaixo, entre as aspas.
  */
-window.MP_ORS_KEY = '';
+window.MP_ORS_KEY = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImVmZGY5OWFhOTY2ZDQzMTJhMTk4N2Y3OWVkOWNkYjg4IiwiaCI6Im11cm11cjY0In0=';
