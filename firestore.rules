@@ -40,6 +40,17 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAdmin();
     }
+    // Cache da distância (km) de cada CEP até a loja, usado no cálculo do frete por combustível.
+    // Qualquer visitante pode gravar (é o próprio navegador do cliente que calcula e guarda, pra não
+    // calcular a mesma distância de novo depois — nem ele mesmo, nem outro cliente da mesma rua), mas
+    // só aceita um valor plausível (km num intervalo razoável, endereço curto) pra evitar lixo/abuso.
+    match /shippingDistanceCache/{cep} {
+      allow read: if true;
+      allow write: if request.resource.data.km is number
+        && request.resource.data.km > 0 && request.resource.data.km < 2000
+        && request.resource.data.address is string
+        && request.resource.data.address.size() < 200;
+    }
     // Categorias, cupons e promoções: cada tipo inteiro fica em 1 documento (catalog/categories,
     // catalog/coupons, catalog/promotions), em vez de 1 documento por item — economiza cota de leitura.
     // Cupons são lidos pelo navegador para validar o código; quem abrir o console consegue ver a lista.

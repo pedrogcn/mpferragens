@@ -25,18 +25,30 @@
     box.hidden = !box.hidden;
     if (!box.hidden) box.querySelector('input').focus();
   });
-  MP.on.submit('ship-calc', (form, fd) => {
+  const renderShipResult = (out, q) => {
+    if (q.calculating) {
+      out.innerHTML = `<b>${esc(q.zone)}</b>: calculando a distância até esse endereço…`;
+      return;
+    }
+    out.innerHTML = q.consult
+      ? `<b>${esc(q.zone)}</b>: ${esc(q.msg)}`
+      : `<b>${esc(q.zone)}</b>: ${q.cost === 0 ? 'frete grátis' : brl(q.cost)}${q.km != null ? ` · ${q.km.toFixed(1).replace('.', ',')} km` : ''} · prazo ${esc(q.days)}${q.freeAbove && q.cost ? `<br><small>Frete grátis em compras acima de ${brl(q.freeAbove)}.</small>` : ''}`;
+  };
+  MP.on.submit('ship-calc', async (form, fd) => {
     const p = MP.catalog.byId(form.dataset.id);
     const out = form.parentElement.querySelector('.ship-result');
-    const q = MP.shipping.quote(fd.get('cep'), p.price, p.type === 'Telhas');
+    const cep = fd.get('cep');
+    const q = MP.shipping.quote(cep, p.price, p.type === 'Telhas');
     if (!q.ok) {
       out.innerHTML = `<span class="text-err">${esc(q.msg)}</span>`;
       return;
     }
-    MP.cart.setCep(fd.get('cep'));
-    out.innerHTML = q.consult
-      ? `<b>${esc(q.zone)}</b>: ${esc(q.msg)}`
-      : `<b>${esc(q.zone)}</b>: ${q.cost === 0 ? 'frete grátis' : brl(q.cost)} · prazo ${esc(q.days)}${q.freeAbove && q.cost ? `<br><small>Frete grátis em compras acima de ${brl(q.freeAbove)}.</small>` : ''}`;
+    MP.cart.setCep(cep);
+    renderShipResult(out, q);
+    if (!window.MP_ORS_KEY || MP.shipping.zoneOf(cep) === 'fora') return;
+    const result = await MP.distance.resolve(cep);
+    MP.cart.setShipDistance(cep, result);
+    if (form.isConnected) renderShipResult(out, MP.shipping.quote(cep, p.price, p.type === 'Telhas'));
   });
   MP.on.click('pickup-toggle', (el) => {
     const box = el.closest('.buybox').querySelector('.pickup-box');

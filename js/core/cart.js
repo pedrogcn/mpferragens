@@ -1,7 +1,7 @@
 /* Carrinho/orçamento, frete, cupons, pedidos e mensagem de WhatsApp. */
 (function (MP) {
   const U = MP.util;
-  const empty = () => ({ lines: [], coupon: null, mode: 'entrega', cep: '' });
+  const empty = () => ({ lines: [], coupon: null, mode: 'entrega', cep: '', shipDistance: null });
 
   MP.ORDER_STATUS = ['Aguardando', 'Em separação', 'A caminho', 'Entregue', 'Cancelado'];
   MP.statusClass = (s) => ({ Aguardando: 'wait', 'Em separação': 'pick', 'A caminho': 'ship', Entregue: 'done', Cancelado: 'cancel' }[s] || 'wait');
@@ -29,21 +29,55 @@
 
   /* ---------- frete ---------- */
   MP.shipping = {
-    /* hasTelha: true se o carrinho/produto tem telha — aí o limite de frete grátis é o maior (freeAboveTelha) */
+    /* zona só pelo prefixo do CEP (rápido, sem chamar nenhuma API) — decide qual fator usar (2x/1,7x) */
+    zoneOf(cep) {
+      const d = U.digits(cep);
+      if (d.length !== 8) return null;
+      const n = Number(d.slice(0, 5));
+      if (n >= 69000 && n <= 69099) return 'manaus';
+      if ((n >= 69100 && n <= 69299) || (n >= 69400 && n <= 69899)) return 'interior';
+      return 'fora';
+    },
+    /* preço pela distância de verdade: km x 2 (ida e volta, Manaus) ou x1,7 (interior) ÷ consumo x gasolina */
+    priceByDistance(km, zone) {
+      const s = MP.settings.get().shipping;
+      const fator = Number(zone === 'manaus' ? s.fatorManaus : s.fatorInterior) || (zone === 'manaus' ? 2 : 1.7);
+      const consumo = Number(s.consumoSaveiro) || 9;
+      const preco = Number(s.precoGasolina) || 0;
+      return U.round2(((km * fator) / consumo) * preco);
+    },
+    /*
+     * hasTelha: true se o carrinho/produto tem telha — aí o limite de frete grátis é o maior (freeAboveTelha).
+     * Usa a distância de verdade (já calculada e guardada no carrinho por MP.distance.resolve, disparado
+     * em js/pages/cart.js e js/pages/product.js) quando disponível; senão usa o frete fixo de reserva —
+     * nunca trava esperando a API aqui dentro, por isso esta função continua síncrona.
+     */
     quote(cep, subtotal, hasTelha) {
       const d = U.digits(cep);
       if (d.length !== 8) return { ok: false, msg: 'Informe um CEP válido com 8 dígitos.' };
-      const n = Number(d.slice(0, 5));
+      const zone = this.zoneOf(cep);
+      if (zone === 'fora') return { ok: true, zone: 'Outras regiões', cost: null, consult: true, msg: 'Para este CEP o frete é combinado pelo WhatsApp.' };
       const s = MP.settings.get().shipping;
       const limit = Number(hasTelha ? s.freeAboveTelha : s.freeAbove);
+      const label = zone === 'manaus' ? 'Manaus' : 'Interior do Amazonas';
+      const days = zone === 'manaus' ? s.manausDays : s.interiorDays;
       const free = limit > 0 && subtotal >= limit;
-      if (n >= 69000 && n <= 69099) {
-        return { ok: true, zone: 'Manaus', cost: free ? 0 : Number(s.manausPrice), free, days: s.manausDays, freeAbove: limit };
+
+      if (!window.MP_ORS_KEY) {
+        // sem chave do mapa configurada: frete fixo de reserva (como o site sempre funcionou)
+        const flatPrice = zone === 'manaus' ? Number(s.manausPrice) : Number(s.interiorPrice);
+        return { ok: true, zone: label, days, freeAbove: limit, free, cost: free ? 0 : flatPrice };
       }
-      if ((n >= 69100 && n <= 69299) || (n >= 69400 && n <= 69899)) {
-        return { ok: true, zone: 'Interior do Amazonas', cost: free ? 0 : Number(s.interiorPrice), free, days: s.interiorDays, freeAbove: limit };
+      const dist = MP.cart.state().shipDistance;
+      if (!dist || dist.cep !== d) {
+        // chave configurada, mas a distância deste CEP ainda está sendo calculada
+        return { ok: true, zone: label, days, freeAbove: limit, cost: null, calculating: true };
       }
-      return { ok: true, zone: 'Outras regiões', cost: null, consult: true, msg: 'Para este CEP o frete é combinado pelo WhatsApp.' };
+      if (dist.km == null) {
+        // tentou calcular e não conseguiu localizar o endereço — não mostra valor nenhum (pode estar errado)
+        return { ok: true, zone: label, cost: null, consult: true, msg: 'Não conseguimos localizar esse CEP para calcular o frete. Confira o número ou fale pelo WhatsApp.' };
+      }
+      return { ok: true, zone: label, days, freeAbove: limit, free, cost: free ? 0 : this.priceByDistance(dist.km, zone), km: dist.km, address: dist.address };
     }
   };
 
@@ -95,7 +129,8 @@
       this.save(s);
     },
     clear() {
-      this.save(Object.assign(empty(), { mode: this.state().mode, cep: this.state().cep }));
+      const s = this.state();
+      this.save(Object.assign(empty(), { mode: s.mode, cep: s.cep, shipDistance: s.shipDistance }));
     },
     setMode(mode) {
       const s = this.state();
@@ -105,6 +140,13 @@
     setCep(cep) {
       const s = this.state();
       s.cep = U.maskCep(cep);
+      if (s.shipDistance && s.shipDistance.cep !== U.digits(cep)) s.shipDistance = null; // CEP mudou: a distância antiga não vale mais
+      this.save(s);
+    },
+    /* guarda a distância já calculada (ou null, se não deu pra calcular) pro CEP atual */
+    setShipDistance(cep, result) {
+      const s = this.state();
+      s.shipDistance = result ? Object.assign({ cep: U.digits(cep) }, result) : { cep: U.digits(cep), km: null, address: null };
       this.save(s);
     },
     applyCoupon(code) {

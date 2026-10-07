@@ -39,13 +39,16 @@
     if (await MP.ui.confirm('Remover todos os itens do orçamento?', { ok: 'Limpar', danger: true })) MP.cart.clear();
   });
   MP.on.change('cart-mode', (el) => MP.cart.setMode(el.value));
-  MP.on.submit('cart-cep', (form, fd) => {
+  MP.on.submit('cart-cep', async (form, fd) => {
     const cep = String(fd.get('cep') || '');
     if (U.digits(cep).length !== 8) {
       MP.ui.toast('Informe um CEP com 8 dígitos.', 'error');
       return;
     }
-    MP.cart.setCep(cep);
+    MP.cart.setCep(cep); // já mostra a zona (Manaus/Interior) e o frete fixo de reserva na hora
+    if (!window.MP_ORS_KEY || MP.shipping.zoneOf(cep) === 'fora') return;
+    const result = await MP.distance.resolve(cep); // calcula a distância de verdade; re-renderiza sozinho (evento 'cart')
+    MP.cart.setShipDistance(cep, result);
   });
   MP.on.submit('cart-coupon', (form, fd) => {
     const r = MP.cart.applyCoupon(fd.get('code'));
@@ -174,8 +177,11 @@
     let shipCell;
     if (s.mode === 'retirada') shipCell = '<span class="ok">Grátis</span>';
     else if (ship.pending) shipCell = '<span class="muted">Informe o CEP</span>';
+    else if (ship.calculating) shipCell = '<span class="muted">Calculando frete…</span>';
     else if (ship.consult) shipCell = '<span class="muted">A combinar</span>';
     else shipCell = ship.cost === 0 ? '<span class="ok">Grátis</span>' : brl(ship.cost);
+    // distância/endereço calculados de verdade (só quando a API de mapas está configurada e já resolveu)
+    const shipDetail = ship.km != null ? `<p class="small muted">${ship.km.toFixed(1).replace('.', ',')} km da loja${ship.address ? ' · ' + esc(ship.address) : ''}</p>` : '';
 
     const rows = t.lines
       .map(
@@ -215,7 +221,7 @@
             <label class="radio"><input type="radio" name="mode" value="entrega" data-change="cart-mode" ${s.mode === 'entrega' ? 'checked' : ''}><span>Receber em casa/obra</span></label>
             <label class="radio"><input type="radio" name="mode" value="retirada" data-change="cart-mode" ${s.mode === 'retirada' ? 'checked' : ''}><span>Retirar na loja</span></label>
             ${s.mode === 'entrega' ? `<form class="inline-form" data-submit="cart-cep"><input name="cep" data-mask="cep" inputmode="numeric" maxlength="9" placeholder="CEP" aria-label="CEP" value="${esc(s.cep)}"><button class="btn btn-outline btn-sm">Calcular</button></form>
-              ${ship.ok && !ship.pending ? `<p class="small muted">${esc(ship.label)}${ship.days ? ' · prazo ' + esc(ship.days) : ''}${ship.consult ? ' — ' + esc(ship.msg) : ''}</p>` : ''}` : `<p class="small muted">${esc(st.pickupText)}</p>`}
+              ${ship.ok && !ship.pending ? `<p class="small muted">${ship.calculating ? 'Calculando distância de entrega…' : `${esc(ship.label)}${ship.days ? ' · prazo ' + esc(ship.days) : ''}${ship.consult ? ' — ' + esc(ship.msg) : ''}`}</p>${shipDetail}` : ''}` : `<p class="small muted">${esc(st.pickupText)}</p>`}
           </fieldset>
           <dl class="totals">
             <div><dt>Subtotal</dt><dd>${brl(t.subtotal)}</dd></div>
@@ -240,6 +246,13 @@
       title: 'Seu orçamento',
       html,
       mount: (app) => {
+        // CEP já estava salvo (ex.: voltou pra esta página) mas a distância ainda não foi calculada
+        if (window.MP_ORS_KEY && s.mode === 'entrega' && U.digits(s.cep).length === 8 && MP.shipping.zoneOf(s.cep) !== 'fora') {
+          const cur = MP.cart.state().shipDistance;
+          if (!cur || cur.cep !== U.digits(s.cep)) {
+            MP.distance.resolve(s.cep).then((result) => MP.cart.setShipDistance(s.cep, result));
+          }
+        }
         if (!MP.cloud.enabled) return;
         MP.cloud.fetchImages(t.lines.map((l) => l.product.id)).then(() => {
           U.$$('.cart-prod[data-id]', app).forEach((a) => {
